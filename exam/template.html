@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>חומר פתוח — מנהיגות בניהול</title>
+<style>
+/* ---------- בסיס ---------- */
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#8a8f96}
+body{font:12.4px/1.46 "Segoe UI","Arial Hebrew",Arial,sans-serif;color:#12161c;direction:rtl}
+
+/* ---------- עמוד ---------- */
+/* A4 = 210×297mm. הריפוד הימני רחב יותר — שם הכריכה/הסיכה. */
+.pg{position:relative;width:209.9mm;height:296.8mm;padding:13mm 11mm 11mm 16mm;
+    background:#fff;margin:0 auto 7mm;overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.pg.over{outline:3px solid #d92b2b}
+.pg.over::after{content:"גלישה";position:absolute;left:2mm;bottom:2mm;
+    background:#d92b2b;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px}
+
+/* כותרת רצה */
+.hd{position:absolute;top:5mm;right:11mm;left:16mm;display:flex;
+    justify-content:space-between;align-items:baseline;
+    border-bottom:1.6px solid var(--c,#333);padding-bottom:1.5mm;
+    font-size:10px;letter-spacing:.2px}
+.hd b{font-size:12.5px;color:var(--c,#333)}
+.hd span{color:#7a828c}
+.pgn{position:absolute;bottom:4.5mm;left:16mm;font-size:10px;color:#7a828c}
+.pgn b{color:#333}
+
+/* לשונית צד — המיקום האנכי משתנה לפי הנושא, כך שבערימת דפים
+   נראות "מדרגות" וניתן לדפדף ישר לנושא בלי לקרוא. */
+.tab{position:absolute;left:0;width:11mm;background:var(--c,#333);color:#fff;
+     display:flex;align-items:center;justify-content:center;
+     writing-mode:vertical-rl;font-size:9.5px;font-weight:700;letter-spacing:.4px;
+     padding:2mm 0;border-radius:3px 0 0 3px}
+
+/* ---------- תוכן ---------- */
+.body{margin-top:6.5mm;column-gap:7mm}
+.body.c2{column-count:2;column-rule:1px solid #dfe3e8}
+h2{font-size:13.5px;color:#fff;background:var(--c,#333);padding:1.3mm 2.5mm;
+   border-radius:2.5px;margin:0 0 1.6mm;break-after:avoid}
+h2:not(:first-child){margin-top:3mm}
+h3{font-size:12px;color:var(--c,#333);margin:2.4mm 0 1mm;break-after:avoid;
+   border-bottom:1px dotted #c3c9d0;padding-bottom:.6mm}
+h3:first-child{margin-top:0}
+dl{margin:0 0 1.2mm}
+dt{font-weight:700;font-size:12.2px;display:inline}
+dd{display:inline;margin:0}
+dl>div{margin-bottom:.9mm;break-inside:avoid;text-indent:-3.2mm;padding-right:3.2mm}
+dt::before{content:"▪ ";color:var(--c,#333);font-weight:700}
+dt::after{content:" — ";font-weight:400;color:#7a828c}
+.n{color:#0b4f9e;font-weight:700;font-feature-settings:"tnum"}
+.q{color:#3d4650;font-style:italic}
+em{font-style:normal;background:#fff2b8;padding:0 1px;border-radius:2px}
+.warn{background:#fdeaea;border-right:2.5px solid #d92b2b;padding:1.2mm 2mm;
+      margin:1.2mm 0;break-inside:avoid;border-radius:0 2.5px 2.5px 0}
+.warn b{color:#a51b1b}
+
+/* טבלאות */
+table{border-collapse:collapse;width:100%;font-size:11.2px;margin:0 0 2mm;break-inside:avoid}
+th{background:var(--c,#333);color:#fff;text-align:right;padding:1mm 2mm;font-size:10px}
+td{border-bottom:1px solid #dfe3e8;padding:.9mm 2mm;vertical-align:top}
+tr:nth-child(even) td{background:#f6f8fa}
+td.k{font-weight:700;white-space:nowrap;color:#0b4f9e;font-feature-settings:"tnum"}
+
+/* ---------- שער ---------- */
+.cover{text-align:center;padding-top:24mm}
+.cover h1{font-size:30px;letter-spacing:-.5px;margin-bottom:2mm}
+.cover .sub{font-size:13px;color:#5b6470;margin-bottom:12mm}
+.toc{text-align:right;max-width:150mm;margin:0 auto}
+.toc a{display:flex;align-items:baseline;gap:2mm;text-decoration:none;color:#12161c;
+       padding:1.5mm 2mm;border-radius:3px;font-size:13px}
+.toc a:nth-child(odd){background:#f2f5f8}
+.toc .sw{width:4mm;height:4mm;border-radius:2px;flex:none}
+.toc .nm{flex:1;font-weight:700}
+.toc .dots{flex:1;border-bottom:1.5px dotted #b9c0c8;transform:translateY(-2px)}
+.toc .pn{font-weight:700;color:#0b4f9e;font-feature-settings:"tnum"}
+.tip{max-width:150mm;margin:10mm auto 0;background:#f2f5f8;border-radius:4px;
+     padding:4mm 5mm;font-size:11px;line-height:1.55}
+.tip b{display:block;margin-bottom:1.5mm;font-size:12px}
+
+/* ---------- מפתח ---------- */
+.idx{column-count:3;column-gap:6mm;font-size:10.6px;line-height:1.5}
+.idx div{break-inside:avoid}
+.idx .t{font-weight:700}
+.idx .p{color:#0b4f9e;font-weight:700}
+.idx h3{column-span:all}
+
+/* ---------- הדפסה ---------- */
+@page{size:A4;margin:0}
+@media print{
+  html{background:#fff}
+  .pg{margin:0;box-shadow:none;break-after:page;page-break-after:always}
+  .pg:last-child{break-after:auto;page-break-after:auto}
+  .pg.over{outline:none}
+  .pg.over::after{display:none}
+  .noprint{display:none}
+}
+.noprint{position:fixed;top:8px;left:8px;z-index:99;background:#12161c;color:#fff;
+  border-radius:6px;padding:7px 11px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.noprint button{background:#2d6cdf;color:#fff;border:0;border-radius:4px;
+  padding:4px 9px;font-size:12px;cursor:pointer;margin-right:6px}
+.noprint a{color:#9ec5ff;text-decoration:none;font-size:12px;margin-right:9px}
+.noprint a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="noprint"><span id="stat">בונה…</span><button onclick="print()">הדפסה</button><a id="back" href="index.html">לתרגול ←</a></div>
+<div id="out"></div>
+
+<script>
+var DATA = /*DATA*/null/*DATA*/;
+
+/* ---- עזרי בנייה ---- */
+function E(t,a,h){var e=document.createElement(t);for(var k in a)e.setAttribute(k,a[k]);
+  if(h!=null)e.innerHTML=h;return e;}
+
+/* טקסט עשיר: **מודגש** ⟨מספר⟩ «ציטוט» __הדגשה__ */
+function rt(s){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/__(.+?)__/g,'<em>$1</em>')
+    .replace(/«(.+?)»/g,'<span class="q">"$1"</span>')
+    .replace(/⟨(.+?)⟩/g,'<span class="n">$1</span>');
+}
+
+/* ---- הופך בלוק לאלמנט ---- */
+function block(b){
+  if(b.h2) return E('h2',{},rt(b.h2));
+  if(b.h3) return E('h3',{},rt(b.h3));
+  if(b.warn) return E('div',{'class':'warn'},rt(b.warn));
+  if(b.tbl){
+    var t=E('table'),th=E('tr');
+    (b.tbl.head||[]).forEach(function(c){th.appendChild(E('th',{},rt(c)));});
+    if(b.tbl.head)t.appendChild(th);
+    b.tbl.rows.forEach(function(r){
+      var tr=E('tr');
+      r.forEach(function(c,i){tr.appendChild(E('td',{'class':i===0?'k':''},rt(c)));});
+      t.appendChild(tr);
+    });
+    return t;
+  }
+  var dl=E('dl');
+  b.items.forEach(function(it){
+    var d=E('div'), p=String(it).split(' :: ');
+    /* ⟦כינוי · כינוי⟧ בכותרת — לא מוצג, אך נכנס למפתח הא״ב. נועד לכותרות
+       שנוסחו כשאלה ("מה נכלל") ואי אפשר לחפש אותן לפי מונח. */
+    var head=p[0], alias='', ma=head.match(/⟦([^⟧]*)⟧/);
+    if(ma){ alias=ma[1]; head=head.replace(/\s*⟦[^⟧]*⟧/,''); }
+    var dt=E('dt',{},rt(head));
+    if(alias) dt.setAttribute('data-idx',alias);
+    d.appendChild(dt);
+    d.appendChild(E('dd',{},rt(p.slice(1).join(' :: '))));
+    dl.appendChild(d);
+  });
+  return dl;
+}
+
+/* ---- דפדוף: ממלא עמוד עד שהוא מתמלא, ואז פותח חדש ---- */
+var out=document.getElementById('out'), pages=[];
+function newPage(sec,cont){
+  var p=E('div',{'class':'pg','style':'--c:'+sec.color});
+  p.appendChild(E('div',{'class':'hd'},
+    '<b>'+sec.name+'</b><span>'+(cont?'המשך':(sec.sub||''))+'</span>'));
+  var tabTop = 14 + sec.idx*(70/Math.max(1,DATA.sections.length-1));
+  p.appendChild(E('div',{'class':'tab',
+    'style':'top:'+tabTop+'mm;height:34mm'},sec.name));
+  var bd=E('div',{'class':'body'+(sec.cols===2?' c2':'')});
+  p.appendChild(bd); p.appendChild(E('div',{'class':'pgn'}));
+  out.appendChild(p); pages.push(p);
+  return bd;
+}
+function fits(pg){return pg.scrollHeight<=pg.clientHeight+1;}
+
+DATA.sections.forEach(function(sec,si){
+  sec.idx=si;
+  var bd=newPage(sec,false), pg=bd.parentNode;
+  sec.blocks.forEach(function(b){
+    var el=block(b);
+    bd.appendChild(el);
+    if(!fits(pg)){
+      bd.removeChild(el);
+      /* כותרת בסוף עמוד — מעבירים אותה יחד עם מה שבא אחריה */
+      var trail=[];
+      while(bd.lastChild && /^H[23]$/.test(bd.lastChild.tagName)){
+        trail.unshift(bd.lastChild); bd.removeChild(bd.lastChild);
+      }
+      bd=newPage(sec,true); pg=bd.parentNode;
+      trail.forEach(function(t){bd.appendChild(t);});
+      bd.appendChild(el);
+      /* בלוק גדול מעמוד שלם — טבלה ארוכה או רשימה ארוכה — נחתך לשורות */
+      while(!fits(pg) && el.rows && el.rows.length>1){
+        var cut=E(el.tagName), moved=false;
+        while(!fits(pg) && el.rows.length>1){
+          cut.insertBefore(el.rows[el.rows.length-1], cut.firstChild);
+          moved=true;
+        }
+        if(!moved) break;
+        bd=newPage(sec,true); pg=bd.parentNode;
+        bd.appendChild(cut); el=cut;
+      }
+      while(!fits(pg) && el.children && el.children.length>1 && !el.rows){
+        var cut2=E(el.tagName,{'class':el.getAttribute('class')||''}), moved2=false;
+        while(!fits(pg) && el.children.length>1){
+          cut2.insertBefore(el.lastElementChild, cut2.firstChild);
+          moved2=true;
+        }
+        if(!moved2) break;
+        bd=newPage(sec,true); pg=bd.parentNode;
+        bd.appendChild(cut2); el=cut2;
+      }
+    }
+  });
+});
+
+/* ---- מספור, שער ומפתח ---- */
+var first={};
+pages.forEach(function(p,i){
+  p.querySelector('.pgn').innerHTML='עמ׳ <b>'+(i+2)+'</b>';
+  var nm=p.querySelector('.hd b').textContent;
+  if(first[nm]===undefined)first[nm]=i+2;
+});
+
+var cover=E('div',{'class':'pg'});
+cover.innerHTML='<div class="cover"><h1>מנהיגות בניהול</h1>'+
+  '<div class="sub">חומר פתוח למבחן · בר-אילן<br>'+
+  '<b>נבנה מהסיכום המקוצר למבחן</b> — כל החומר בדפי A4, עם לשוניות ניווט ומפתח א״ב</div></div>';
+var toc=E('div',{'class':'toc'});
+DATA.sections.forEach(function(s){
+  var a=E('a',{href:'#'},'<span class="sw" style="background:'+s.color+'"></span>'+
+    '<span class="nm">'+s.name+'</span><span class="dots"></span>'+
+    '<span class="pn">'+first[s.name]+'</span>');
+  toc.appendChild(a);
+});
+cover.querySelector('.cover').appendChild(toc);
+cover.querySelector('.cover').appendChild(E('div',{'class':'tip'},
+  '<b>איך מנווטים כאן מהר</b>'+rt(
+  '__שני הפרקים הראשונים הם מה שתפתחו בו הכי הרבה__ — **מילון ראשי התיבות וטבלת כל המספרים**, '+
+  'ואחריו **הביבליוגרפיה** (⟨4⟩ שאלות במבחן). שאר הפרקים לפי נושא. '+
+  'הלשוניות בשוליים השמאליים יורדות מדרגה-מדרגה לפי סדר הפרקים — בערימת דפים '+
+  'רואים אותן מהצד ומדפדפים ישר לפרק, בלי לקרוא כותרות. '+
+  'בסוף החוברת **מפתח מונחים לפי א״ב** עם מספרי עמודים. '+
+  '⟨מספרים⟩ מודגשים בכחול · __הדגשה צהובה__ = נקודה שהמרצה חזר עליה · '+
+  '«מירכאות אלכסוניות» = ציטוט מהכיתה.')));
+out.insertBefore(cover,out.firstChild);
+cover.appendChild(E('div',{'class':'pgn'},'עמ׳ <b>1</b>'));
+
+/* מפתח א״ב — נבנה מהמונחים שסומנו, כך שמספרי העמודים תמיד נכונים */
+var terms={};
+pages.forEach(function(p,i){
+  p.querySelectorAll('dt').forEach(function(d){
+    var t=d.textContent.replace(/^▪\s*/,'').replace(/\s*—\s*$/,'').trim();
+    var keys=[t];
+    var al=d.getAttribute('data-idx');
+    if(al) keys=keys.concat(al.split('·'));
+    keys.forEach(function(k){
+      k=k.trim();
+      if(k.length<2||k.length>44)return;
+      (terms[k]=terms[k]||[]).push(i+2);
+    });
+  });
+});
+var keys=Object.keys(terms).sort(function(a,b){return a.localeCompare(b,'he');});
+var ixSec={name:'מפתח',color:'#3d4650',sub:'לפי א״ב',idx:DATA.sections.length-1};
+/* המפתח מתפרס על פני כמה עמודים בדיוק כמו התוכן — אחרת הוא גולש. */
+var ixFirst=pages.length+2;          /* לשורת התוכן שתתווסף בהמשך */
+var ibd=newPage(ixSec,false), ipg=ibd.parentNode, idx=E('div',{'class':'idx'});
+ibd.appendChild(idx);
+keys.forEach(function(k){
+  var u=terms[k].filter(function(v,i,a){return a.indexOf(v)===i;});
+  var row=E('div',{},'<span class="t">'+k+'</span> <span class="p">'+u.join(', ')+'</span>');
+  idx.appendChild(row);
+  if(!fits(ipg)){
+    idx.removeChild(row);
+    ibd=newPage(ixSec,true); ipg=ibd.parentNode;
+    idx=E('div',{'class':'idx'}); ibd.appendChild(idx); idx.appendChild(row);
+  }
+});
+pages.forEach(function(p,i){var e=p.querySelector('.pgn');if(e)e.innerHTML='עמ׳ <b>'+(i+2)+'</b>';});
+
+/* המפתח נבנה אחרי שהשער כבר נוצר, ולכן שורתו מתווספת לתוכן העניינים רק כאן */
+toc.appendChild(E('a',{href:'#'},
+  '<span class="sw" style="background:'+ixSec.color+'"></span>'+
+  '<span class="nm">מפתח מונחים לפי א״ב</span><span class="dots"></span>'+
+  '<span class="pn">'+ixFirst+'</span>'));
+
+/* הקישור חזרה — שם הקובץ שונה בין הרפו לתיקיית הקורס */
+(function(){
+  var me=decodeURIComponent(location.pathname.split('/').pop()||'');
+  if(me.indexOf('חומר פתוח')===0)
+    document.getElementById('back').setAttribute('href','בוחן תרגול - מנהיגות בניהול.html');
+})();
+
+/* ---- בקרת גלישה ---- */
+var over=0;
+document.querySelectorAll('.pg').forEach(function(p){
+  if(p.scrollHeight>p.clientHeight+1){p.classList.add('over');over++;}
+});
+document.getElementById('stat').textContent=
+  document.querySelectorAll('.pg').length+' עמודים'+(over?' · '+over+' בגלישה':' · תקין');
+</script>
+</body>
+</html>

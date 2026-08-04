@@ -24,8 +24,15 @@ tpl  = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
 bank = "\n".join(open(f, encoding="utf-8").read() for f in bank_files())
 html = tpl.replace("/*__BANK__*/", bank)
 
-for t in TARGETS:
-    open(t, "w", encoding="utf-8").write(html)
+def for_course_folder(page):
+    """העותק שיושב בתיקיית הקורס נמצא רמה אחת מעל leadership-quiz, ושם
+    לחוברת יש שם אחר. בלי ההחלפה הזו הקישור אליה שבור."""
+    return page.replace('href="חומר-פתוח.html"',
+                        'href="חומר פתוח - מנהיגות בניהול.html"')
+
+for i, t in enumerate(TARGETS):
+    page = html if i == 0 else for_course_folder(html)
+    open(t, "w", encoding="utf-8").write(page)
     print("נכתב:", t)
 print("גודל: %.0f KB" % (len(html) / 1024))
 

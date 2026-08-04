@@ -50,6 +50,14 @@ body{margin:0;background:var(--bg);color:var(--text);
 .wrap{max-width:820px;margin:0 auto;padding:22px 20px 60px;}
 header h1{font-size:23px;margin:0 0 4px;font-weight:650;}
 header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
+/* קישור לחוברת החומר הפתוח */
+.aids{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.aid{display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+  background:var(--chipBg);border:1px solid var(--border);border-radius:10px;
+  padding:9px 14px;color:var(--text);font-size:13.5px;transition:.15s;flex:1 1 260px;}
+.aid:hover{border-color:var(--accent);}
+.aid b{font-weight:650;}
+.aid i{font-style:normal;font-size:16px;line-height:1;flex:none;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
 .scopehint{font-size:12.5px;color:var(--muted);margin:-6px 0 12px;padding-right:2px;}
@@ -123,6 +131,33 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
   header h1{font-size:19px;} .pbtn{width:29px;height:29px;font-size:11.5px;}
   .opt{padding:11px 12px;} .stats{gap:11px;font-size:13px;}
 }
+
+/* ---------- תצוגת הדפסה של השאלות ---------- */
+/* דף נפרד מהאפליקציה: הכל נפרש ברצף, בלי אינטראקציה, ובצפיפות
+   שמתאימה לנייר. המבחן פתוח-חומר ולכן זה נועד להיכנס איתו לכיתה. */
+#print{display:none;}
+.pq{break-inside:avoid;margin-bottom:9px;}
+.pq .pn{font-weight:700;color:var(--accent);}
+.pq .po{margin:1px 0 0 0;padding-right:15px;}
+.pq .pa{color:var(--okTx);font-weight:600;}
+.pq .pe{color:var(--muted);}
+.prhead{display:none;}
+@media print{
+  @page{size:A4;margin:11mm 10mm;}
+  html,body{background:#fff!important;color:#000!important;}
+  html{--accent:#1a4f8a;--muted:#444;--okTx:#0a5c22;--border:#bbb;}
+  .wrap{max-width:none;padding:0;}
+  header,#app,.foot{display:none!important;}
+  #print{display:block!important;font-size:9.6pt;line-height:1.34;}
+  #print.cols{column-count:2;column-gap:8mm;column-rule:1px solid #ccc;}
+  .prhead{display:block;border-bottom:1.5px solid #000;padding-bottom:2mm;
+    margin-bottom:3mm;column-span:all;}
+  .prhead h2{font-size:13pt;margin:0;}
+  .prhead div{font-size:8.6pt;color:#444;margin-top:1mm;}
+  .pq{margin-bottom:2.6mm;}
+  .pq .pt{font-size:7.6pt;color:#666;}
+  .pq .pe{font-size:8.8pt;}
+}
 </style>
 </head>
 <body>
@@ -130,10 +165,16 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
 <header>
   <h1>בוחן תרגול — מנהיגות בניהול</h1>
   <div class="sub" id="sub"></div>
+  <div class="aids">
+    <a class="aid" href="חומר-פתוח.html" target="_blank" rel="noopener">
+      <i>📄</i><span><b>חוברת החומר הפתוח</b> · כל הסיכום בדפי A4 להדפסה, עם לשוניות ומפתח א״ב</span>
+    </a>
+  </div>
 </header>
 <div id="app"></div>
-<div style="text-align:center;color:var(--muted);font-size:12px;margin-top:24px;">
-  לתרגול לימודי בלבד · נבנה מסיכום הקורס
+<div id="print"></div>
+<div class="foot" style="text-align:center;color:var(--muted);font-size:12px;margin-top:24px;">
+  לתרגול לימודי בלבד · נבנה מסיכום הקורס המקוצר למבחן
 </div>
 </div>
 <script>
@@ -143,27 +184,32 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
 var LET=["א","ב","ג","ד"];
 var SRC_META={
   "סיכום":{bg:"var(--clsBg)",fg:"var(--clsTx)",full:"סיכום הקורס"},
-  "שאלות מבחן":{bg:"var(--warnBg)",fg:"var(--warnTx)",full:"שאלות ממבחנים קודמים"}
+  "שאלות מבחן":{bg:"var(--warnBg)",fg:"var(--warnTx)",full:"שאלות ממבחנים קודמים"},
+  "מעבר לסיכום":{bg:"var(--errBg)",fg:"var(--errTx)",full:"⚠ מחוץ להיקף המבחן"}
 };
+var OUT_OF_SCOPE="מעבר לסיכום";
 var app=document.getElementById("app");
 var TOPICS=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.t]){s[b.t]=1;TOPICS.push(b.t);}}); })();
 var SOURCES=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.s]){s[b.s]=1;SOURCES.push(b.s);}}); })();
 
-var sel={topics:TOPICS.slice(),src:"all",mode:"practice",shuffle:true,minutes:0,count:0,pcount:20,balanced:true};
+var sel={topics:TOPICS.slice(),src:"exam",mode:"practice",shuffle:true,minutes:0,count:0,pcount:20,balanced:true};
 var quiz=[],idx=0,score=0,answered=false,wrong=[],ansMap=[],timer=null,timeLeft=0;
 
 document.getElementById("sub").textContent =
-  BANK.length+" שאלות רב-ברירתיות מסיכום הקורס — גישות ניהוליות, תיאוריות מנהיגות ומוטיבציה. "+
-  "כולל שאלות שנוסחו מרשימת שאלות המבחן שבסוף הסיכום.";
+  BANK.length+" שאלות רב-ברירתיות — גישות ניהוליות, תיאוריות מנהיגות, מוטיבציה, ניהול צוות ו-Big Five. "+
+  "המבחן בחומר פתוח: אפשר להדפיס גם את השאלות וגם את חוברת החומר.";
 
 function E(tag,attr,html){var e=document.createElement(tag);if(attr)for(var k in attr)e.setAttribute(k,attr[k]);if(html!=null)e.innerHTML=html;return e;}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
-/* היקפי לימוד. רשימת השאלות שבסוף הסיכום היא החומר הקרוב ביותר למבחן
-   עצמו, ולכן היא היקף נפרד — ממנה מתחילים כשהזמן קצר. */
+/* היקפי לימוד. הסיכום המקוצר למבחן צר יותר מהסיכום המלא: נשמטו ממנו
+   נושאים שלמים (רדין, וורום-ייטון, נתיב-מטרה, צדק ארגוני ועוד). השאלות
+   עליהם לא נמחקו — הן נכונות — אלא הוצאו מהיקף ברירת המחדל. */
 var SCOPE={
   core:{name:"שאלות מבחן",  hint:"רק מה שנוסח מרשימת שאלות המבחן שבסוף הסיכום — הכי קרוב לנוסח האמיתי",
         f:function(s){return s==="שאלות מבחן";}},
-  all: {name:"הכל",         hint:"כל החומר — סיכום הקורס ושאלות המבחן יחד",
+  exam:{name:"היקף המבחן",  hint:"כל מה שנמצא בסיכום המקוצר למבחן — זו ברירת המחדל",
+        f:function(s){return s!=="מעבר לסיכום";}},
+  all: {name:"הכל",         hint:"כולל נושאים שנשמטו מהסיכום המקוצר — להעמקה, לא נדרש למבחן",
         f:function(){return true;}}
 };
 function srcOK(s){ return SCOPE[sel.src] ? SCOPE[sel.src].f(s) : s===sel.src; }
@@ -206,9 +252,11 @@ function setup(){
   var c=E("div",{"class":"card"});
 
   c.appendChild(E("div",{"class":"note"},
+    "<b>המבחן בחומר פתוח.</b> אפשר להדפיס מכאן את השאלות (הכפתורים בתחתית), ובנפרד את "+
+    "<b>חוברת החומר</b> — הקישור בראש העמוד.<br>"+
     "<b>איך לתרגל:</b> ב<b>מצב תרגול</b> מקבלים משוב והסבר אחרי כל שאלה, ובסוף הסבב אפשר לתרגל רק את השגויות. "+
-    "ב<b>סימולציית מבחן</b> עונים על הכל ורק בסוף מקבלים ציון וסקירה של כל שגיאה — כמו במבחן האמיתי.<br>"+
-    "<b>מאיפה להתחיל:</b> בהיקף <b>שאלות מבחן</b> — אלו נוסחו מרשימת השאלות שבסוף סיכום הקורס."));
+    "ב<b>סימולציית מבחן</b> עונים על הכל ורק בסוף מקבלים ציון וסקירה של כל שגיאה.<br>"+
+    "<b>מאיפה להתחיל:</b> בהיקף <b>שאלות מבחן</b> — אלו נוסחו מרשימת השאלות שבסוף הסיכום."));
 
   /* mode */
   var row1=E("div",{"class":"toolbar"});
@@ -245,7 +293,7 @@ function setup(){
   /* היקף לימוד */
   var row0=E("div",{"class":"toolbar"});
   row0.appendChild(E("span",{"class":"lbl"},"היקף:"));
-  ["core","all"].forEach(function(k){
+  ["core","exam","all"].forEach(function(k){
     var b=E("button",{"class":"chip"+(sel.src===k?" active":"")},
       SCOPE[k].name+" <small>"+countScope(k)+"</small>");
     b.onclick=function(){sel.src=k;setup();};
@@ -297,6 +345,20 @@ function setup(){
   info.innerHTML="<span>נבחרו <b>"+n+"</b> שאלות</span>";
   c.appendChild(info);
 
+  /* אזהרה גלויה כשהבחירה כוללת חומר שאינו בסיכום המקוצר. בלי זה
+     ההבדל נשען רק על תווית קטנה ליד השאלה, וקל לפספס אותו. */
+  var nOut=filterBank().filter(function(q){return q.s===OUT_OF_SCOPE;}).length;
+  if(nOut){
+    var w=E("div",{"class":"note"});
+    w.style.background="var(--errBg)";
+    w.style.borderColor="var(--errBd)";
+    w.innerHTML="<b style='color:var(--errTx)'>⚠ "+nOut+" מהשאלות שנבחרו הן מחוץ להיקף המבחן</b> — "+
+      "נושאים שהיו בסיכום הישן ונשמטו מהסיכום המקוצר (רדין, וורום-ייטון, נתיב-מטרה, צדק ארגוני ועוד). "+
+      "הן מסומנות בתווית אדומה, ואינן מופיעות בחוברת החומר הפתוח. "+
+      "לתרגול לפי הסיכום החדש בלבד — בחרו בהיקף <b>היקף המבחן</b>.";
+    c.appendChild(w);
+  }
+
   var go=E("button",{"class":"btn btn-pri"},
     sel.mode==="exam"?"התחלת סימולציית מבחן":"התחלת תרגול");
   go.style.width="100%";
@@ -304,7 +366,47 @@ function setup(){
   go.onclick=function(){ sel.mode==="exam"?examStart():practiceStart(); };
   c.appendChild(go);
 
+  /* הדפסה — המבחן פתוח-חומר, ולכן אפשר להיכנס איתו לכיתה */
+  var pr=E("div",{"class":"toolbar"});
+  pr.style.marginTop="12px";
+  pr.appendChild(E("span",{"class":"lbl"},"הדפסה:"));
+  var p1=E("button",{"class":"iconbtn"},"🖨 השאלות עם התשובות");
+  p1.onclick=function(){printSheet(true);};
+  var p2=E("button",{"class":"iconbtn"},"🖨 השאלות בלבד");
+  p2.onclick=function(){printSheet(false);};
+  pr.appendChild(p1);pr.appendChild(p2);
+  c.appendChild(pr);
+  c.appendChild(E("div",{"class":"scopehint"},
+    "מדפיס את "+n+" השאלות שנבחרו למעלה — לפי הנושאים וההיקף. "+
+    "לחוברת החומר עצמו יש קובץ נפרד (הקישור בראש העמוד)."));
+
   app.appendChild(c);
+}
+
+/* ---------- גיליון הדפסה ---------- */
+/* נבנה אל תוך #print, שמוסתר במסך ומוצג רק בהדפסה. כך אין צורך
+   בחלון חדש (שחוסמי חלונות קופצים עוצרים) והעיצוב נשאר בקובץ אחד. */
+function printSheet(withAnswers){
+  var arr=filterBank();
+  if(!arr.length){alert("לא נבחרו שאלות להדפסה.");return;}
+  var box=document.getElementById("print");
+  box.className = withAnswers ? "" : "cols";   /* בלי תשובות — צפוף יותר, שתי עמודות */
+  var esc=function(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;};
+  var h='<div class="prhead"><h2>בוחן תרגול — מנהיגות בניהול</h2><div>'+
+        arr.length+" שאלות · "+(SCOPE[sel.src]?SCOPE[sel.src].name:sel.src)+
+        " · "+(withAnswers?"עם תשובות והסברים":"ללא תשובות")+"</div></div>";
+  arr.forEach(function(q,i){
+    h+='<div class="pq"><div class="pt">'+esc(q.t)+
+       (q.s===OUT_OF_SCOPE?' · <b>⚠ מחוץ להיקף המבחן</b>':'')+'</div>'+
+       '<div><span class="pn">'+(i+1)+'.</span> '+esc(q.q)+'</div>';
+    q.o.forEach(function(o,k){ h+='<div class="po">'+LET[k]+". "+esc(o)+"</div>"; });
+    if(withAnswers)
+      h+='<div class="po pa">✔ '+LET[q.c]+". "+esc(q.o[q.c])+'</div>'+
+         '<div class="po pe">'+esc(q.e)+"</div>";
+    h+="</div>";
+  });
+  box.innerHTML=h;
+  window.print();
 }
 
 /* ---------- shared bits ---------- */
