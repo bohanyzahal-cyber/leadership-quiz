@@ -294,7 +294,18 @@ var keys=Object.keys(terms).sort(function(a,b){return a.localeCompare(b,'he');})
 var ixSec={name:'מפתח',color:'#3d4650',sub:'לפי א״ב',idx:DATA.sections.length-1};
 /* המפתח מתפרס על פני כמה עמודים בדיוק כמו התוכן — אחרת הוא גולש. */
 var ixFirst=pages.length+1;          /* לשורת התוכן שתתווסף בהמשך */
-var ibd=newPage(ixSec,false), ipg=ibd.parentNode, idx=E('div',{'class':'idx'});
+/* גם המפתח ממשיך בעמוד קיים כשנשאר בו מקום. הלשונית תישאר של המקטע
+   הקודם, ולכן נוספת כותרת מפורשת שמסמנת היכן המפתח מתחיל. */
+var ibd, ipg;
+if(lastBd && lastBd.scrollHeight < lastBd.parentNode.clientHeight*0.72){
+  ibd = lastBd; ipg = ibd.parentNode;
+  var ir = E('div',{'class':'secbreak','style':'--c:'+ixSec.color});
+  ir.innerHTML = '<b>מפתח מונחים</b><span>לפי א״ב</span>';
+  ibd.appendChild(ir);
+} else {
+  ibd = newPage(ixSec,false); ipg = ibd.parentNode;
+}
+var idx=E('div',{'class':'idx'});
 ibd.appendChild(idx);
 keys.forEach(function(k){
   var u=terms[k].filter(function(v,i,a){return a.indexOf(v)===i;});

@@ -65,10 +65,18 @@ SEC_BY_NAME = {n: (c, s) for n, c, s in SECTIONS}
 # הכותרת שהמשתמש נתן למקטע הרביעי, אחרי שערך אותו ידנית
 ALIAS = {"תיאוריית התכונות - מנהיגות ותכונות": "מנהיגות ותכונות"}
 
+BR_TAG = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}br'
+
 def rich(par):
-    """מרכיב מחדש את הטקסט, כשריצות מודגשות עוטפות ב-**."""
+    """מרכיב מחדש את הטקסט, כשריצות מודגשות עוטפות ב-**.
+
+    <w:br/> בתוך פסקה הוא שורה חדשה לכל דבר. בלי לתרגם אותו, כל שאלות
+    המבחן שבסוף החוברת נדחסו לגוש טקסט אחד רצוף.
+    """
     out = []
     for r in par.runs:
+        if r._r.find(BR_TAG) is not None or r._r.findall('.//' + BR_TAG):
+            out.append("\n")
         t = r.text
         if not t: continue
         if r.bold and t.strip():
@@ -77,8 +85,11 @@ def rich(par):
         else:
             out.append(t)
     s = "".join(out)
-    s = re.sub(r'\*\*\s*\*\*', '', s)          # מיזוג ריצות סמוכות
-    s = re.sub(r'\*\*(\s+)\*\*', r'\1', s)
+    # הסדר כאן קריטי. הגרסה הקודמת הריצה קודם  \*\*\s*\*\* -> ''  וכך בלעה
+    # את הרווח שבין שתי ריצות מודגשות — מכאן "מחקריהאות'ורן" ו"וגישת?ת.".
+    s = re.sub(r'\*\*(\s+)\*\*', r'\1', s)     # "**  **"  ->  "  "
+    s = re.sub(r'\*\*\*\*', '', s)             # רק ריצות צמודות ממש
+    s = re.sub(r'[\t ]{2,}', ' ', s)           # טאבים ששימשו ליישור בוורד
     return s.strip()
 
 def esc(s):
@@ -141,38 +152,63 @@ for ch in doc.element.body.iterchildren():
                 print("!! תמונה נכשלה (%s): %s" % (rid, type(e).__name__)); continue
             flush_items(); blocks.append(("img", (uri, w, h)))
 
-    txt = fixup(rich(p))
-    if not txt: continue
-    plain = re.sub(r'\*\*', '', txt).strip()
+    raw = fixup(rich(p))
+    if not raw: continue
     r0 = p.runs[0] if p.runs else None
     sz = r0.font.size.pt if (r0 and r0.font.size) else None
 
-    # שם מקטע פותח מקטע רק בפעם הראשונה. בסוף החוברת שמות המקטעים חוזרים
-    # ככותרות-משנה שמקבצות את שאלות המבחן לפי נושא ("אדיג'ס", "בס ואבוליו"),
-    # ובלעדי התנאי הזה כל אחת מהן הייתה פותחת מקטע חדש ועמוד חדש.
-    name = ALIAS.get(plain, plain)
-    if name in SEC_BY_NAME and name not in used_sections:
-        used_sections.add(name); open_sec(name); continue
-    if cur is None:                              # שער / כותרת-על לפני המקטע הראשון
-        continue
-    if plain.startswith('▪'):                    # פריט
-        # ה-▪ נכתב לפעמים בתוך ריצה מודגשת, ואז rich() מחזיר "**▪ מונח**".
-        # בלי הניקוי הזה ה-** וה-▪ נדבקים לראש הערך וזולגים למפתח הא״ב.
-        rt = txt.strip()
-        rt = re.sub(r'^\*\*\s*▪\s*', '**', rt)   # "**▪ x**"  ->  "**x**"
-        rt = re.sub(r'^▪\s*', '', rt)            # "▪ x"      ->  "x"
-        rt = re.sub(r'^\*\*\s*\*\*', '', rt).strip()
-        parts = rt.split(' — ', 1)
-        if len(parts) == 2:
-            entry = "%s :: %s" % (parts[0].strip(), parts[1].strip())
-        else:
-            entry = rt
-        if items is None: items = []
-        items.append(entry); continue
-    if sz == 10.5 or (sz is None and len(plain) < 46 and not plain.endswith('.')):
-        flush_items(); blocks.append(("h2", txt)); continue
-    # פסקת המשך — נשמרת כטקסט חופשי
-    flush_items(); blocks.append(("p", txt))
+    # פסקה אחת בוורד עשויה להכיל כמה שורות (<w:br/>) וכמה זוגות "ש. … ת. …"
+    # שהופרדו רק בטאבים. בלי הפיצול הזה הן נדבקות לגוש טקסט אחד ארוך.
+    segments = []
+    for line in raw.split("\n"):
+        line = line.strip()
+        if not line: continue
+        qs = re.split(r'(?=(?:\*\*)?ש\s*[.,]\s)', line)
+        qs = [q.strip() for q in qs if q.strip()]
+        segments.extend(qs if len(qs) > 1 else [line])
+
+    for txt in segments:
+        plain = re.sub(r'\*\*', '', txt).strip()
+
+        # שם מקטע פותח מקטע רק בפעם הראשונה. בסוף החוברת שמות המקטעים חוזרים
+        # ככותרות-משנה שמקבצות את שאלות המבחן לפי נושא ("אדיג'ס", "בס ואבוליו"),
+        # ובלעדי התנאי הזה כל אחת מהן הייתה פותחת מקטע חדש ועמוד חדש.
+        name = ALIAS.get(plain, plain)
+        if name in SEC_BY_NAME and name not in used_sections:
+            used_sections.add(name); open_sec(name); continue
+        if cur is None:                          # שער לפני המקטע הראשון
+            continue
+
+        # שאלת מבחן: "ש. … ת. …" הופכת לפריט שבו השאלה היא המונח והתשובה
+        # ההגדרה, כדי שתיראה כמו כל שאר החוברת ותיכנס למפתח.
+        m = re.match(r'^(?:\*\*)?ש\s*[.,]\s*(.+?)\s*(?:\*\*)?\s*ת\s*[.,]\s*(.+)$', plain, re.S)
+        if m:
+            q, a = m.group(1).strip().rstrip('?').strip(), m.group(2).strip()
+            if items is None: items = []
+            items.append("%s? :: %s" % (q, a)); continue
+
+        if plain.startswith('▪'):                # פריט
+            # ה-▪ נכתב לפעמים בתוך ריצה מודגשת, ואז rich() מחזיר "**▪ מונח**".
+            # בלי הניקוי הזה ה-** וה-▪ נדבקים לראש הערך וזולגים למפתח הא״ב.
+            rt = txt.strip()
+            rt = re.sub(r'^\*\*\s*▪\s*', '**', rt)
+            rt = re.sub(r'^▪\s*', '', rt)
+            rt = re.sub(r'^\*\*\s*\*\*', '', rt).strip()
+            parts = rt.split(' — ', 1)
+            if len(parts) == 2:
+                entry = "%s :: %s" % (parts[0].strip(), parts[1].strip())
+            else:
+                entry = rt
+            if items is None: items = []
+            items.append(entry); continue
+        # כותרת: או 10.5pt שכתב הייצוא, או שורה קצרה שאינה מודגשת. התנאי
+        # "אינה מודגשת" נחוץ מאז פיצול השאלות — בלעדיו עשרות קטעים קצרים
+        # ומודגשים הפכו לכותרות (57 במקום 10).
+        if sz == 10.5 or (sz is None and len(plain) < 46
+                          and not plain.endswith('.') and not txt.startswith('**')):
+            flush_items(); blocks.append(("h2", txt)); continue
+        # פסקת המשך — נשמרת כטקסט חופשי
+        flush_items(); blocks.append(("p", txt))
 
 flush_items()
 if cur: secs.append((cur, blocks))
