@@ -167,7 +167,10 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
   <div class="sub" id="sub"></div>
   <div class="aids">
     <a class="aid" href="חומר-פתוח.html" target="_blank" rel="noopener">
-      <i>📄</i><span><b>חוברת החומר הפתוח</b> · כל הסיכום בדפי A4 להדפסה, עם לשוניות ומפתח א״ב</span>
+      <i>📄</i><span><b>חוברת החומר הפתוח</b> · 10 עמודים = 5 דפים בדיוק, עם לשוניות ומפתח א״ב</span>
+    </a>
+    <a class="aid" href="חומר פתוח - מנהיגות בניהול.docx">
+      <i>📝</i><span><b>אותה חוברת בוורד</b> · למי שרוצה לערוך, להוסיף או להוריד</span>
     </a>
   </div>
 </header>
@@ -185,9 +188,9 @@ var LET=["א","ב","ג","ד"];
 var SRC_META={
   "סיכום":{bg:"var(--clsBg)",fg:"var(--clsTx)",full:"סיכום הקורס"},
   "שאלות מבחן":{bg:"var(--warnBg)",fg:"var(--warnTx)",full:"שאלות ממבחנים קודמים"},
-  "מעבר לסיכום":{bg:"var(--errBg)",fg:"var(--errTx)",full:"⚠ מחוץ להיקף המבחן"}
+  "מחוץ להיקף":{bg:"var(--errBg)",fg:"var(--errTx)",full:"⚠ מחוץ להיקף המבחן"}
 };
-var OUT_OF_SCOPE="מעבר לסיכום";
+var OUT_OF_SCOPE="מחוץ להיקף";
 var app=document.getElementById("app");
 var TOPICS=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.t]){s[b.t]=1;TOPICS.push(b.t);}}); })();
 var SOURCES=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.s]){s[b.s]=1;SOURCES.push(b.s);}}); })();
@@ -195,26 +198,27 @@ var SOURCES=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.s]){s[b.s]
 var sel={topics:TOPICS.slice(),src:"exam",mode:"practice",shuffle:true,minutes:0,count:0,pcount:20,balanced:true};
 var quiz=[],idx=0,score=0,answered=false,wrong=[],ansMap=[],timer=null,timeLeft=0;
 
-document.getElementById("sub").textContent =
-  BANK.length+" שאלות רב-ברירתיות — גישות ניהוליות, תיאוריות מנהיגות, מוטיבציה, ניהול צוות ו-Big Five. "+
-  "המבחן בחומר פתוח: אפשר להדפיס גם את השאלות וגם את חוברת החומר.";
-
 function E(tag,attr,html){var e=document.createElement(tag);if(attr)for(var k in attr)e.setAttribute(k,attr[k]);if(html!=null)e.innerHTML=html;return e;}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
-/* היקפי לימוד. הסיכום המקוצר למבחן צר יותר מהסיכום המלא: נשמטו ממנו
-   נושאים שלמים (רדין, וורום-ייטון, נתיב-מטרה, צדק ארגוני ועוד). השאלות
-   עליהם לא נמחקו — הן נכונות — אלא הוצאו מהיקף ברירת המחדל. */
+/* היקפי לימוד. מה שיצא מההיקף לא נמחק — הוא נכון עובדתית — אלא הוצא
+   מברירת המחדל: נושאים שנשמטו מהסיכום המקוצר (רדין, וורום-ייטון,
+   נתיב-מטרה, צדק ארגוני), וכן נושא המוטיבציה כולו, שירד מהמבחן. */
 var SCOPE={
   core:{name:"שאלות מבחן",  hint:"רק מה שנוסח מרשימת שאלות המבחן שבסוף הסיכום — הכי קרוב לנוסח האמיתי",
         f:function(s){return s==="שאלות מבחן";}},
-  exam:{name:"היקף המבחן",  hint:"כל מה שנמצא בסיכום המקוצר למבחן — זו ברירת המחדל",
-        f:function(s){return s!=="מעבר לסיכום";}},
-  all: {name:"הכל",         hint:"כולל נושאים שנשמטו מהסיכום המקוצר — להעמקה, לא נדרש למבחן",
+  exam:{name:"היקף המבחן",  hint:"כל מה שנכנס למבחן. בלי מוטיבציה (ירדה) ובלי מה שנשמט מהסיכום המקוצר",
+        f:function(s){return s!==OUT_OF_SCOPE;}},
+  all: {name:"הכל",         hint:"מוסיף את מה שאינו נדרש למבחן — מוטיבציה והנושאים שנשמטו. להעמקה בלבד",
         f:function(){return true;}}
 };
 function srcOK(s){ return SCOPE[sel.src] ? SCOPE[sel.src].f(s) : s===sel.src; }
 function filterBank(){return BANK.filter(function(x){return sel.topics.indexOf(x.t)>=0 && srcOK(x.s);});}
 function countScope(k){return BANK.filter(function(x){return SCOPE[k].f(x.s);}).length;}
+
+/* אחרי הגדרת SCOPE — הכותרת מונה את שאלות ההיקף, לא את כל המאגר. */
+document.getElementById("sub").textContent =
+  countScope("exam")+" שאלות בהיקף המבחן — גישות ניהוליות, תיאוריות מנהיגות, ניהול צוות ו-Big Five. "+
+  "המבחן בחומר פתוח: מותר להיכנס עם 5 דפים (10 עמודים), והחוברת בנויה בדיוק לזה.";
 /* מערבב את סדר התשובות בכל שאלה, כדי שהתשובה הנכונה לא תהיה תמיד באותו מקום */
 function prepQ(q){
   var order=shuffle([0,1,2,3]);
@@ -252,8 +256,9 @@ function setup(){
   var c=E("div",{"class":"card"});
 
   c.appendChild(E("div",{"class":"note"},
-    "<b>המבחן בחומר פתוח.</b> אפשר להדפיס מכאן את השאלות (הכפתורים בתחתית), ובנפרד את "+
-    "<b>חוברת החומר</b> — הקישור בראש העמוד.<br>"+
+    "<b>המבחן בחומר פתוח — מותר להיכנס עם 5 דפים (10 עמודים).</b> החוברת בראש העמוד היא בדיוק 10 עמודים, "+
+    "כך שאפשר להדפיס אותה דו-צדדי ולהיכנס איתה. אפשר גם להדפיס מכאן את השאלות (הכפתורים בתחתית).<br>"+
+    "<b>נושא המוטיבציה ירד מהמבחן</b> ואינו בהיקף — לא בשאלות ולא בחוברת.<br>"+
     "<b>איך לתרגל:</b> ב<b>מצב תרגול</b> מקבלים משוב והסבר אחרי כל שאלה, ובסוף הסבב אפשר לתרגל רק את השגויות. "+
     "ב<b>סימולציית מבחן</b> עונים על הכל ורק בסוף מקבלים ציון וסקירה של כל שגיאה.<br>"+
     "<b>מאיפה להתחיל:</b> בהיקף <b>שאלות מבחן</b> — אלו נוסחו מרשימת השאלות שבסוף הסיכום."));
@@ -299,11 +304,8 @@ function setup(){
     b.onclick=function(){sel.src=k;setup();};
     row0.appendChild(b);
   });
-  SOURCES.forEach(function(s){
-    var b=E("button",{"class":"chip"+(sel.src===s?" active":"")},((SRC_META[s]||{}).full||s)+" <small>"+countBy("s",s)+"</small>");
-    b.onclick=function(){sel.src=s;setup();};
-    row0.appendChild(b);
-  });
+  /* בעבר הופיעו כאן גם כפתורים לכל מקור בנפרד. הם היו כפילות של שלושת
+     ההיקפים ורק הוסיפו רעש — נמחקו אחרי שהמסך נקרא "מסובך". */
   c.appendChild(row0);
   if(SCOPE[sel.src])
     c.appendChild(E("div",{"class":"scopehint"},SCOPE[sel.src].hint));
