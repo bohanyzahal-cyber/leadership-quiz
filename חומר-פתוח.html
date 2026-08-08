@@ -54,7 +54,7 @@ dt::after{content:" — ";font-weight:400;color:#7a828c}
 .q{color:#3d4650;font-style:italic}
 em{font-style:normal;background:#fff2b8;padding:0 1px;border-radius:2px}
 .fig{margin:1mm 0 1.6mm;break-inside:avoid;text-align:center}
-.fig img{max-width:100%;max-height:46mm;height:auto;border:1px solid #d7dce1;border-radius:2px}
+.fig img{max-width:100%;max-height:38mm;height:auto;border:1px solid #d7dce1;border-radius:2px}
 /* פסקאות שהודבקו לוורד בלי תבליט קיבלו מרווח כפול מזה של הפריטים,
    והעמודים האחרונים נראו מרווחים מדי. כאן הן מיושרות לאותה צפיפות.
    תבליט ותלייה נוסו ונפסלו: הם הוסיפו גלישות שורה ועמוד שלם. */
@@ -1044,8 +1044,14 @@ function block(b){
   if(b.p) return E('div',{'class':'ptxt'},rt(b.p));
   /* דיאגרמות וצילומי טבלאות מהמצגות. הגובה מוגבל כדי שתמונה בודדת
      לא תבלע טור שלם — במגבלת 5 דפים זה יקר מדי. */
+  /* width/height מפורשים הם קריטיים: העימוד רץ לפני שהתמונות מפוענחות,
+     ובלעדיהם גובהן בזמן החישוב הוא 0, בדיקת ההתאמה עוברת, ואז הן גדלות
+     ודוחפות את התוכן אל מחוץ לעמוד (עמוד אחד חרג ב-579px). עם המידות
+     הדפדפן יודע את יחס הממדים מיד ושומר את המקום. */
   if(b.img){var f=E('figure',{'class':'fig'});
-    f.appendChild(E('img',{src:b.img,alt:''}));return f;}
+    var a={src:b.img,alt:''};
+    if(b.w&&b.h){a.width=b.w;a.height=b.h;}
+    f.appendChild(E('img',a));return f;}
   if(b.tbl){
     /* טבלה רחבה (5 עמודות ומעלה) נפרסת על שני הטורים — בטור בודד
        העמודות נמעכות והטקסט נעשה בלתי קריא. */
@@ -1090,7 +1096,35 @@ function newPage(sec,cont){
   out.appendChild(p); pages.push(p);
   return bd;
 }
-function fits(pg){return pg.scrollHeight<=pg.clientHeight+1;}
+/* בדיקת התאמה אמיתית.
+
+   הגרסה הקודמת בדקה pg.scrollHeight<=pg.clientHeight, ושתי התכונות האלה
+   שוות תמיד: ל-.pg יש overflow:hidden, ו-.body הוא מכולה רב-טורית שגדלה
+   לפי תוכנה. כלומר הבדיקה השוותה את העמוד לעצמו והחזירה "מתאים" תמיד,
+   בעוד התוכן חרג מאות פיקסלים מתחת לשוליים ונחתך בשקט.
+
+   כאן נמדד המרחק האמיתי: תחתית התוכן מול תחתית שטח ההדפסה, פחות מקום
+   שמור למספר העמוד. */
+var FOOTER_PX = 20;
+function fits(pg){
+  var bd = pg.querySelector('.body');
+  if (!bd) return true;
+  var pr = pg.getBoundingClientRect();
+  var br = bd.getBoundingClientRect();
+  var padBottom = parseFloat(getComputedStyle(pg).paddingBottom) || 0;
+  var limit = pr.bottom - padBottom - FOOTER_PX;
+  return br.top + bd.scrollHeight <= limit + 1;
+}
+
+/* חלק השטח הזמין שכבר תפוס — משמש להחלטה אם מקטע חדש יכול להמשיך
+   בעמוד קיים. נשען על אותה מדידה של fits(), ולא על scrollHeight. */
+function fillRatio(bd){
+  var pg = bd.parentNode;
+  var pr = pg.getBoundingClientRect(), br = bd.getBoundingClientRect();
+  var padBottom = parseFloat(getComputedStyle(pg).paddingBottom) || 0;
+  var avail = (pr.bottom - padBottom - FOOTER_PX) - br.top;
+  return avail > 0 ? bd.scrollHeight / avail : 1;
+}
 
 /* השער מוזרק לגוף העמוד הראשון לפני התוכן, ולא כעמוד נפרד: במגבלת
    5 דפים עמוד שלם לשער הוא 10% מהחוברת. הוא נוסף כאן, לפני מילוי
@@ -1098,13 +1132,13 @@ function fits(pg){return pg.scrollHeight<=pg.clientHeight+1;}
 var coverHost=null, lastBd=null;
 DATA.sections.forEach(function(sec,si){
   sec.idx=si;
-  /* מקטע חדש ממשיך בעמוד הנוכחי אם נשאר בו מקום של ממש. בלי זה כל מקטע
-     פותח עמוד, וסופי המקטעים הותירו שלושה עמודים מלאים ב-14%-37% —
-     בזבוז שלא ניתן להרשות כשהמגבלה היא 5 דפים. */
+  /* כל נושא פותח עמוד חדש. קודם מקטע היה ממשיך בעמוד קיים כדי לחסוך
+     עמודים, אבל אז נושא התחיל באמצע עמוד של נושא אחר — קשה לאיתור
+     בזמן מבחן. עדיף עמוד נקי לכל נושא, גם במחיר עמודים נוספים. */
   var bd, pg;
   /* נמדד גובה התוכן של ה-body, לא של העמוד: ל-.pg יש overflow:hidden
      ולכן scrollHeight שלו שווה תמיד ל-clientHeight ואינו מעיד על מילוי. */
-  if(lastBd && lastBd.scrollHeight < lastBd.parentNode.clientHeight*0.72){
+  if(false){                      /* כל נושא פותח עמוד — ראו הערה למטה */
     bd = lastBd; pg = bd.parentNode;
     var rule = E('div',{'class':'secbreak','style':'--c:'+sec.color});
     rule.innerHTML = '<b>'+sec.name+'</b><span>'+(sec.sub||'')+'</span>';
@@ -1197,8 +1231,10 @@ var ixSec={name:'מפתח',color:'#3d4650',sub:'לפי א״ב',idx:DATA.sections
 var ixFirst=pages.length+1;          /* לשורת התוכן שתתווסף בהמשך */
 /* גם המפתח ממשיך בעמוד קיים כשנשאר בו מקום. הלשונית תישאר של המקטע
    הקודם, ולכן נוספת כותרת מפורשת שמסמנת היכן המפתח מתחיל. */
+/* המפתח אינו "נושא", ולכן הוא כן רשאי להמשיך בעמוד קיים שנשאר בו מקום —
+   הכלל "נושא פותח עמוד" נועד למנוע נושא שמתחיל באמצע נושא אחר. */
 var ibd, ipg;
-if(lastBd && lastBd.scrollHeight < lastBd.parentNode.clientHeight*0.72){
+if(lastBd && fillRatio(lastBd) < 0.55){
   ibd = lastBd; ipg = ibd.parentNode;
   var ir = E('div',{'class':'secbreak','style':'--c:'+ixSec.color});
   ir.innerHTML = '<b>מפתח מונחים</b><span>לפי א״ב</span>';
