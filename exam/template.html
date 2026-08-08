@@ -64,6 +64,8 @@ em{font-style:normal;background:#fff2b8;padding:0 1px;border-radius:2px}
 .warn b{color:#a51b1b}
 
 /* טבלאות */
+table.wide{column-span:all;font-size:8.6px}
+table.wide td,table.wide th{padding:.5mm .8mm;line-height:1.25}
 table{border-collapse:collapse;width:100%;font-size:8.2px;margin:0 0 1.2mm;break-inside:avoid}
 th{background:var(--c,#333);color:#fff;text-align:right;padding:1mm 2mm;font-size:10px}
 td{border-bottom:1px solid #dfe3e8;padding:.9mm 2mm;vertical-align:top}
@@ -149,7 +151,10 @@ function block(b){
   if(b.img){var f=E('figure',{'class':'fig'});
     f.appendChild(E('img',{src:b.img,alt:''}));return f;}
   if(b.tbl){
-    var t=E('table'),th=E('tr');
+    /* טבלה רחבה (5 עמודות ומעלה) נפרסת על שני הטורים — בטור בודד
+       העמודות נמעכות והטקסט נעשה בלתי קריא. */
+    var wide=(b.tbl.head||b.tbl.rows[0]||[]).length>=5;
+    var t=E('table',wide?{'class':'wide'}:null),th=E('tr');
     (b.tbl.head||[]).forEach(function(c){th.appendChild(E('th',{},rt(c)));});
     if(b.tbl.head)t.appendChild(th);
     b.tbl.rows.forEach(function(r){
