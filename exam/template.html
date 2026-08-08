@@ -93,7 +93,12 @@ td.k{font-weight:700;white-space:nowrap;color:#0b4f9e;font-feature-settings:"tnu
 .tip b{display:block;margin-bottom:1.5mm;font-size:12px}
 
 /* ---------- מפתח ---------- */
-.idx{column-count:4;column-gap:5mm;font-size:9.2px;line-height:1.4}
+/* column-span:all קריטי כשהמפתח יושב בזנב עמוד דו-טורי: בלעדיו הוא
+   מכולה רב-טורית בתוך מכולה רב-טורית, וגובהו הנמדד (offsetHeight) קטן
+   מגובהו בפועל (scrollHeight) — כך שבדיקת ההתאמה מאשרת אותו והוא נחתך. */
+/* חמישה טורים ולא ארבעה: כך המפתח נכנס לזנב העמוד של הנושא המארח
+   במקום לתפוס עמוד שלם — עמוד אחד מתוך עשרה. */
+.idx{column-count:5;column-gap:4mm;font-size:9px;line-height:1.38;column-span:all}
 .idx div{break-inside:avoid}
 .idx .t{font-weight:700}
 .idx .p{color:#0b4f9e;font-weight:700}
@@ -210,51 +215,48 @@ function newPage(sec,cont){
    כאן נמדד המרחק האמיתי: תחתית התוכן מול תחתית שטח ההדפסה, פחות מקום
    שמור למספר העמוד. */
 var FOOTER_PX = 20;
-function fits(pg){
+function bottomLimit(pg){
+  var pr = pg.getBoundingClientRect();
+  var padBottom = parseFloat(getComputedStyle(pg).paddingBottom) || 0;
+  return pr.bottom - padBottom - FOOTER_PX;
+}
+/* soft — תקציב גובה לעמוד, לאיזון המילוי בין עמודי אותו נושא. לעולם אינו
+   רופף מהגבול הפיזי, ולכן אינו יכול לגרום לגלישה. */
+function fits(pg, soft){
   var bd = pg.querySelector('.body');
   if (!bd) return true;
-  var pr = pg.getBoundingClientRect();
   var br = bd.getBoundingClientRect();
-  var padBottom = parseFloat(getComputedStyle(pg).paddingBottom) || 0;
-  var limit = pr.bottom - padBottom - FOOTER_PX;
+  var limit = bottomLimit(pg);
+  if (soft) limit = Math.min(limit, br.top + soft);
   return br.top + bd.scrollHeight <= limit + 1;
 }
-
-/* חלק השטח הזמין שכבר תפוס — משמש להחלטה אם מקטע חדש יכול להמשיך
-   בעמוד קיים. נשען על אותה מדידה של fits(), ולא על scrollHeight. */
-function fillRatio(bd){
-  var pg = bd.parentNode;
-  var pr = pg.getBoundingClientRect(), br = bd.getBoundingClientRect();
-  var padBottom = parseFloat(getComputedStyle(pg).paddingBottom) || 0;
-  var avail = (pr.bottom - padBottom - FOOTER_PX) - br.top;
-  return avail > 0 ? bd.scrollHeight / avail : 1;
+function usedH(pg){ return pg.querySelector('.body').scrollHeight; }
+function availH(pg){
+  return bottomLimit(pg) - pg.querySelector('.body').getBoundingClientRect().top;
+}
+function dropPages(from){
+  for (var i = pages.length-1; i >= from; i--) pages[i].remove();
+  pages.length = from;
 }
 
 /* השער מוזרק לגוף העמוד הראשון לפני התוכן, ולא כעמוד נפרד: במגבלת
    5 דפים עמוד שלם לשער הוא 10% מהחוברת. הוא נוסף כאן, לפני מילוי
    העמוד, כדי שבדיקת ההתאמה תדחוף את התוכן העודף לעמוד הבא. */
-var coverHost=null, lastBd=null;
-DATA.sections.forEach(function(sec,si){
-  sec.idx=si;
-  /* כל נושא פותח עמוד חדש. קודם מקטע היה ממשיך בעמוד קיים כדי לחסוך
-     עמודים, אבל אז נושא התחיל באמצע עמוד של נושא אחר — קשה לאיתור
-     בזמן מבחן. עדיף עמוד נקי לכל נושא, גם במחיר עמודים נוספים. */
-  var bd, pg;
-  /* נמדד גובה התוכן של ה-body, לא של העמוד: ל-.pg יש overflow:hidden
-     ולכן scrollHeight שלו שווה תמיד ל-clientHeight ואינו מעיד על מילוי. */
-  if(false){                      /* כל נושא פותח עמוד — ראו הערה למטה */
-    bd = lastBd; pg = bd.parentNode;
-    var rule = E('div',{'class':'secbreak','style':'--c:'+sec.color});
-    rule.innerHTML = '<b>'+sec.name+'</b><span>'+(sec.sub||'')+'</span>';
-    bd.appendChild(rule);
-  } else {
-    bd = newPage(sec,false); pg = bd.parentNode;
-  }
+var coverHost=null;
+
+/* כל נושא פותח עמוד חדש. קודם מקטע היה ממשיך בעמוד קיים כדי לחסוך
+   עמודים, אבל אז נושא התחיל באמצע עמוד של נושא אחר — קשה לאיתור
+   בזמן מבחן. עדיף עמוד נקי לכל נושא, גם במחיר עמודים נוספים. */
+function layoutSection(sec, si, soft){
+  var from = pages.length;
+  var bd = newPage(sec,false), pg = bd.parentNode;
   if(si===0){ coverHost=E('div',{'class':'coverbar'}); bd.insertBefore(coverHost,bd.firstChild); }
   sec.blocks.forEach(function(b){
     var el=block(b);
     bd.appendChild(el);
-    if(!fits(pg)){
+    /* בלוק ראשון בעמוד נשאר בו גם אם חרג מהתקציב הרך — אחרת נפתח עמוד
+       ריק והלולאה לא מתקדמת. */
+    if(!fits(pg,soft) && bd.children.length>1){
       bd.removeChild(el);
       /* כותרת בסוף עמוד — מעבירים אותה יחד עם מה שבא אחריה */
       var trail=[];
@@ -264,33 +266,160 @@ DATA.sections.forEach(function(sec,si){
       bd=newPage(sec,true); pg=bd.parentNode;
       trail.forEach(function(t){bd.appendChild(t);});
       bd.appendChild(el);
-      /* בלוק גדול מעמוד שלם — טבלה ארוכה או רשימה ארוכה — נחתך לשורות */
-      while(!fits(pg) && el.rows && el.rows.length>1){
-        var cut=E(el.tagName), moved=false;
-        while(!fits(pg) && el.rows.length>1){
-          cut.insertBefore(el.rows[el.rows.length-1], cut.firstChild);
-          moved=true;
-        }
-        if(!moved) break;
-        bd=newPage(sec,true); pg=bd.parentNode;
-        bd.appendChild(cut); el=cut;
+    }
+    /* בלוק גדול מעמוד שלם — טבלה ארוכה או רשימה ארוכה — נחתך לשורות.
+       כאן תמיד הגבול הפיזי: מדובר במניעת חיתוך, לא באיזון. */
+    while(!fits(pg,0) && el.rows && el.rows.length>1){
+      /* המחלקה נשמרת: טבלה רחבה שנחתכה בין עמודים איבדה את class="wide"
+         והמשכה נדחס לטור בודד. */
+      var cut=E(el.tagName,{'class':el.getAttribute('class')||''}), moved=false;
+      while(!fits(pg,0) && el.rows.length>1){
+        cut.insertBefore(el.rows[el.rows.length-1], cut.firstChild);
+        moved=true;
       }
-      while(!fits(pg) && el.children && el.children.length>1 && !el.rows){
-        var cut2=E(el.tagName,{'class':el.getAttribute('class')||''}), moved2=false;
-        while(!fits(pg) && el.children.length>1){
-          cut2.insertBefore(el.lastElementChild, cut2.firstChild);
-          moved2=true;
-        }
-        if(!moved2) break;
-        bd=newPage(sec,true); pg=bd.parentNode;
-        bd.appendChild(cut2); el=cut2;
+      if(!moved) break;
+      bd=newPage(sec,true); pg=bd.parentNode;
+      bd.appendChild(cut); el=cut;
+    }
+    while(!fits(pg,0) && el.children && el.children.length>1 && !el.rows){
+      var cut2=E(el.tagName,{'class':el.getAttribute('class')||''}), moved2=false;
+      while(!fits(pg,0) && el.children.length>1){
+        cut2.insertBefore(el.lastElementChild, cut2.firstChild);
+        moved2=true;
       }
+      if(!moved2) break;
+      bd=newPage(sec,true); pg=bd.parentNode;
+      bd.appendChild(cut2); el=cut2;
     }
   });
-  lastBd = bd;          /* לשימוש המקטע הבא, אם יישאר מקום בעמוד */
+  return {bd:bd, from:from, count:pages.length-from};
+}
+
+/* מעבר א׳ — מילוי חמדני, רק כדי לדעת כמה עמודים כל נושא צורך וכמה
+   תוכן יש בו. מעבר ב׳ מפזר את אותו תוכן שווה בשווה על אותם עמודים,
+   כדי שהעמוד האחרון של נושא לא ייראה חתוך באמצע. */
+var plan=[];
+DATA.sections.forEach(function(sec,si){
+  sec.idx=si;
+  var r=layoutSection(sec,si,0);
+  var tot=0;
+  for(var i=r.from;i<pages.length;i++) tot+=usedH(pages[i]);
+  plan.push({sec:sec, si:si, count:r.count, total:tot,
+             avail:availH(pages[r.from]), slack:r.count*availH(pages[r.from])-tot});
 });
 
-/* ---- מספור, שער ומפתח ---- */
+/* ---- המפתח ----
+   נבנה מהמונחים שסומנו, כך שמספרי העמודים תמיד נכונים. */
+function collectTerms(){
+  var terms={};
+  pages.forEach(function(p,i){
+    p.querySelectorAll('dt').forEach(function(d){
+      var t=d.textContent.replace(/^▪\s*/,'').replace(/\s*—\s*$/,'').trim();
+      var ks=[t];
+      var al=d.getAttribute('data-idx');
+      if(al) ks=ks.concat(al.split('·'));
+      ks.forEach(function(k){
+        k=k.trim();
+        if(k.length<2||k.length>44)return;
+        (terms[k]=terms[k]||[]).push(i+1);
+      });
+    });
+  });
+  return terms;
+}
+function buildIndexEl(terms){
+  var wrap=E('div',{'class':'idxwrap'});
+  wrap.appendChild(E('div',{'class':'secbreak idxhd','style':'--c:#3d4650'},
+    '<b>מפתח מונחים</b><span>לפי א״ב</span>'));
+  var idx=E('div',{'class':'idx'});
+  Object.keys(terms).sort(function(a,b){return a.localeCompare(b,'he');})
+    .forEach(function(k){
+      var u=terms[k].filter(function(v,i,a){return a.indexOf(v)===i;});
+      idx.appendChild(E('div',{},'<span class="t">'+k+'</span> '+
+                                 '<span class="p">'+u.join(', ')+'</span>'));
+    });
+  wrap.appendChild(idx);
+  return wrap;
+}
+
+/* גובה המפתח נמדד על עמוד אמיתי — הרוחב והטורים קובעים אותו. */
+var probePg=pages[pages.length-1], probe=buildIndexEl(collectTerms());
+var beforeH=usedH(probePg);
+probePg.querySelector('.body').appendChild(probe);
+var IDX_H=usedH(probePg)-beforeH;
+probe.remove();
+
+/* המפתח אינו "נושא", ולכן מותר לו לשבת בזנב עמוד קיים — הכלל
+   "נושא פותח עמוד" נועד למנוע נושא שמתחיל באמצע נושא אחר. מארחים אותו
+   בנושא שנשאר בו הכי הרבה מקום, וסופרים אותו כחלק מתקציב אותו נושא,
+   כך שגם עמודיו נשארים מאוזנים. אם אין מקום — עמוד משלו. */
+var host=null;
+plan.forEach(function(pl){ if(pl.slack>=IDX_H+4 && (!host||pl.slack>host.slack)) host=pl; });
+
+/* ---- מעבר ב׳: פריסה מאוזנת ----
+   התקציב מתחיל בחלוקה שווה של התוכן, אבל בלוקים הם יחידות בדידות: עמוד
+   נעצר לפני התקציב ולא בדיוק עליו, והשארית הצטברה לעמוד נוסף כמעט ריק
+   (הנושאים תפחו מ-2 עמודים ל-3). לכן התקציב מתרופף עד שהפריסה חוזרת
+   למספר העמודים של המילוי החמדני — הכי מאוזן שאפשר בלי לשלם עמוד. */
+function balanced(pl, reserve){
+  var target=(pl.total+reserve)/pl.count;
+  for(var k=0;k<16;k++){
+    var from=pages.length, r=layoutSection(pl.sec,pl.si,target);
+    if(r.count<=pl.count) return r;
+    dropPages(from);
+    target*=1.04;
+  }
+  return layoutSection(pl.sec,pl.si,0);
+}
+/* הנושא המארח נפרס כך שבעמוד האחרון יישאר מקום למפתח — ואת זה בודקים
+   במדידה, לא בחשבון: חלוקה שווה של תוכן+מפתח החטיאה בשני אחוזים, כי
+   פיזור מחדש בין הטורים משנה מעט את הגובה הכולל. */
+function layoutHost(pl, idxH){
+  var target=(pl.total+idxH)/pl.count;
+  for(var k=0;k<40;k++){
+    var from=pages.length, r=layoutSection(pl.sec,pl.si,target);
+    var lp=pages[pages.length-1];
+    if(r.count<=pl.count && usedH(lp)+idxH<=availH(lp)-4) return r;
+    dropPages(from);
+    if(target>=pl.avail) break;
+    target=Math.min(pl.avail,target*1.03);
+  }
+  return null;
+}
+dropPages(0);
+plan.forEach(function(pl){
+  if(pl===host){
+    var r=layoutHost(pl,IDX_H);
+    if(r){ pl.res=r; return; }
+    host=null;                       /* לא נכנס — המפתח יקבל עמוד משלו */
+  }
+  pl.res=(pl.count>1)?balanced(pl,0):layoutSection(pl.sec,pl.si,0);
+});
+
+var ixSec={name:'מפתח',color:'#3d4650',sub:'לפי א״ב',idx:DATA.sections.length};
+var idxWrap=buildIndexEl(collectTerms()), ixFirst;
+if(host){
+  var hbd=host.res.bd;
+  hbd.appendChild(idxWrap);
+  if(fits(hbd.parentNode,0)) ixFirst=pages.indexOf(hbd.parentNode)+1;
+  else { hbd.removeChild(idxWrap); host=null; }
+}
+if(!host){
+  var ibd=newPage(ixSec,false); ixFirst=pages.length;
+  idxWrap.querySelector('.idxhd').remove();   /* הכותרת הרצה כבר אומרת "מפתח" */
+  ibd.appendChild(idxWrap);
+  var iel=idxWrap.querySelector('.idx');      /* ארוך מעמוד — נחתך */
+  while(!fits(ibd.parentNode,0) && iel.children.length>1){
+    var icut=E('div',{'class':'idx'}), imoved=false;
+    while(!fits(ibd.parentNode,0) && iel.children.length>1){
+      icut.insertBefore(iel.lastElementChild,icut.firstChild); imoved=true;
+    }
+    if(!imoved) break;
+    ibd=newPage(ixSec,true); ibd.appendChild(icut); iel=icut;
+  }
+}
+
+/* ---- מספור ושער ---- */
 var first={};
 pages.forEach(function(p,i){
   p.querySelector('.pgn').innerHTML='עמ׳ <b>'+(i+1)+'</b>';
@@ -314,57 +443,15 @@ cover.querySelector('.cover').appendChild(E('div',{'class':'tip'},
   '<b>איך מנווטים מהר</b> '+rt('הלשוניות בשוליים יורדות מדרגה לפי סדר הפרקים — בערימת דפים רואים אותן מהצד ומדפדפים ישר לפרק. בסוף — **מפתח מונחים לפי א״ב** עם מספרי עמודים. __הדגשה צהובה__ = דגש של המרצה · «מירכאות» = ציטוט · ⟨מספרים⟩ בכחול.')));
 if(coverHost) coverHost.appendChild(cover.firstChild);
 
-/* מפתח א״ב — נבנה מהמונחים שסומנו, כך שמספרי העמודים תמיד נכונים */
-var terms={};
-pages.forEach(function(p,i){
-  p.querySelectorAll('dt').forEach(function(d){
-    var t=d.textContent.replace(/^▪\s*/,'').replace(/\s*—\s*$/,'').trim();
-    var keys=[t];
-    var al=d.getAttribute('data-idx');
-    if(al) keys=keys.concat(al.split('·'));
-    keys.forEach(function(k){
-      k=k.trim();
-      if(k.length<2||k.length>44)return;
-      (terms[k]=terms[k]||[]).push(i+1);
-    });
-  });
-});
-var keys=Object.keys(terms).sort(function(a,b){return a.localeCompare(b,'he');});
-var ixSec={name:'מפתח',color:'#3d4650',sub:'לפי א״ב',idx:DATA.sections.length-1};
-/* המפתח מתפרס על פני כמה עמודים בדיוק כמו התוכן — אחרת הוא גולש. */
-var ixFirst=pages.length+1;          /* לשורת התוכן שתתווסף בהמשך */
-/* גם המפתח ממשיך בעמוד קיים כשנשאר בו מקום. הלשונית תישאר של המקטע
-   הקודם, ולכן נוספת כותרת מפורשת שמסמנת היכן המפתח מתחיל. */
-/* המפתח אינו "נושא", ולכן הוא כן רשאי להמשיך בעמוד קיים שנשאר בו מקום —
-   הכלל "נושא פותח עמוד" נועד למנוע נושא שמתחיל באמצע נושא אחר. */
-var ibd, ipg;
-if(lastBd && fillRatio(lastBd) < 0.55){
-  ibd = lastBd; ipg = ibd.parentNode;
-  var ir = E('div',{'class':'secbreak','style':'--c:'+ixSec.color});
-  ir.innerHTML = '<b>מפתח מונחים</b><span>לפי א״ב</span>';
-  ibd.appendChild(ir);
-} else {
-  ibd = newPage(ixSec,false); ipg = ibd.parentNode;
-}
-var idx=E('div',{'class':'idx'});
-ibd.appendChild(idx);
-keys.forEach(function(k){
-  var u=terms[k].filter(function(v,i,a){return a.indexOf(v)===i;});
-  var row=E('div',{},'<span class="t">'+k+'</span> <span class="p">'+u.join(', ')+'</span>');
-  idx.appendChild(row);
-  if(!fits(ipg)){
-    idx.removeChild(row);
-    ibd=newPage(ixSec,true); ipg=ibd.parentNode;
-    idx=E('div',{'class':'idx'}); ibd.appendChild(idx); idx.appendChild(row);
-  }
-});
-pages.forEach(function(p,i){var e=p.querySelector('.pgn');if(e)e.innerHTML='עמ׳ <b>'+(i+1)+'</b>';});
-
-/* המפתח נבנה אחרי שהשער כבר נוצר, ולכן שורתו מתווספת לתוכן העניינים רק כאן */
 toc.appendChild(E('a',{href:'#'},
   '<span class="sw" style="background:'+ixSec.color+'"></span>'+
   '<span class="nm">מפתח מונחים לפי א״ב</span><span class="dots"></span>'+
   '<span class="pn">'+ixFirst+'</span>'));
+/* המפתח יושב בזנב נושא קיים, ולכן מספר עמודו קטן משל הנושא האחרון —
+   בלי המיון הזה תוכן העניינים היה קופץ אחורה בשורה האחרונה. */
+[].slice.call(toc.children)
+  .sort(function(a,b){return a.querySelector('.pn').textContent-b.querySelector('.pn').textContent;})
+  .forEach(function(a){toc.appendChild(a);});
 
 /* הקישור חזרה — שם הקובץ שונה בין הרפו לתיקיית הקורס */
 (function(){
@@ -373,10 +460,14 @@ toc.appendChild(E('a',{href:'#'},
     document.getElementById('back').setAttribute('href','בוחן תרגול - מנהיגות בניהול.html');
 })();
 
-/* ---- בקרת גלישה ---- */
+/* ---- בקרת גלישה ----
+   חייבת להשתמש באותה מדידה כמו fits(). הגרסה הקודמת בדקה
+   p.scrollHeight>p.clientHeight, ולעמוד יש overflow:hidden — כלומר שתי
+   התכונות שוות תמיד, הבדיקה השוותה את העמוד לעצמו, והסטטוס דיווח
+   «תקין» גם כשתוכן נחתך. */
 var over=0;
 document.querySelectorAll('.pg').forEach(function(p){
-  if(p.scrollHeight>p.clientHeight+1){p.classList.add('over');over++;}
+  if(!fits(p)){p.classList.add('over');over++;}
 });
 document.getElementById('stat').textContent=
   document.querySelectorAll('.pg').length+' עמודים'+(over?' · '+over+' בגלישה':' · תקין');

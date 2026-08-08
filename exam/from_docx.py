@@ -108,6 +108,31 @@ def fixup(s):
         s = s.replace(a, b)
     return s
 
+def is_blank(s):
+    """פסקה שאין בה אלא סימוני עיצוב — לא תוכן.
+
+    ייבוא קודם הכניס 45 פסקאות שכולן "**", והחוברת הציגה אותן כטקסט.
+    """
+    return not re.sub(r'[*_▪\s]', '', s or '')
+
+def balance(s):
+    """מסיר ** בודד שאין לו בן-זוג.
+
+    ה-** נכתב סביב ריצה מודגשת בוורד, אבל ריצה שנחתכה בין פסקאות (או
+    שהמפריד " :: " עבר בתוכה) משאירה חצי זוג — ו-rt() בתבנית מציג אותו
+    כטקסט. כל צד של " :: " נבדק לחוד, כי הוא מוצג בנפרד.
+    """
+    def one(t):
+        if t.count('**') % 2 == 0:
+            return t
+        # פותח בתחילת המחרוזת — כוונתו להדגיש את כולה, אז סוגרים בסוף.
+        # אחרת זה סוגר יתום של הדגשה שהתחילה במקום אחר — מוחקים אותו.
+        return t + '**' if t.startswith('**') else t.replace('**', '', 1)
+    if ' :: ' not in s:
+        return one(s)
+    head, tail = s.split(' :: ', 1)
+    return '%s :: %s' % (one(head), one(tail))
+
 # ---------------------------------------------------------------------------
 # תמונות שהן בעצם צילום של טבלה. בטור צר הטקסט בהן קטן מכדי להיקרא, ולכן הן
 # מוקלדות כאן כטבלה אמיתית: קריאה בכל גודל, נכנסת למפתח, ושוקלת בייטים בודדים
@@ -206,7 +231,7 @@ for ch in doc.element.body.iterchildren():
             flush_items(); blocks.append(("img", (uri, w, h)))
 
     raw = fixup(rich(p))
-    if not raw: continue
+    if is_blank(raw): continue
     r0 = p.runs[0] if p.runs else None
     sz = r0.font.size.pt if (r0 and r0.font.size) else None
 
@@ -221,6 +246,7 @@ for ch in doc.element.body.iterchildren():
         segments.extend(qs if len(qs) > 1 else [line])
 
     for txt in segments:
+        if is_blank(txt): continue          # מקטע שנשאר ממנו רק "**"
         plain = re.sub(r'\*\*', '', txt).strip()
 
         # שם מקטע פותח מקטע רק בפעם הראשונה. בסוף החוברת שמות המקטעים חוזרים
@@ -238,7 +264,7 @@ for ch in doc.element.body.iterchildren():
         if m:
             q, a = m.group(1).strip().rstrip('?').strip(), m.group(2).strip()
             if items is None: items = []
-            items.append("%s? :: %s" % (q, a)); continue
+            items.append(balance("%s? :: %s" % (q, a))); continue
 
         if plain.startswith('▪'):                # פריט
             # ה-▪ נכתב לפעמים בתוך ריצה מודגשת, ואז rich() מחזיר "**▪ מונח**".
@@ -253,15 +279,15 @@ for ch in doc.element.body.iterchildren():
             else:
                 entry = rt
             if items is None: items = []
-            items.append(entry); continue
+            items.append(balance(entry)); continue
         # כותרת: או 10.5pt שכתב הייצוא, או שורה קצרה שאינה מודגשת. התנאי
         # "אינה מודגשת" נחוץ מאז פיצול השאלות — בלעדיו עשרות קטעים קצרים
         # ומודגשים הפכו לכותרות (57 במקום 10).
         if sz == 10.5 or (sz is None and len(plain) < 46
                           and not plain.endswith('.') and not txt.startswith('**')):
-            flush_items(); blocks.append(("h2", txt)); continue
+            flush_items(); blocks.append(("h2", balance(txt))); continue
         # פסקת המשך — נשמרת כטקסט חופשי
-        flush_items(); blocks.append(("p", txt))
+        flush_items(); blocks.append(("p", balance(txt)))
 
 flush_items()
 if cur: secs.append((cur, blocks))

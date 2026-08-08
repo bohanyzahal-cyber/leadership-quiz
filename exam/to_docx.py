@@ -91,10 +91,11 @@ for s in DATA["sections"]:
         if "h2" in b or "h3" in b:
             p = doc.add_paragraph(); rtl(p)
             p.paragraph_format.space_before = Pt(5)
-            r = p.add_run(b.get("h2") or b.get("h3"))
-            r.bold = True; r.font.size = Pt(10.5); r.font.name = 'Arial'
-            r._element.rPr.rFonts.set(qn('w:cs'), 'Arial')
-            r.font.color.rgb = RGBColor.from_string(s.get("color", "#333333").lstrip('#').upper())
+            # דרך add_rich ולא add_run: הכותרות מכילות ** מאז שהתוכן יובא
+            # מוורד, ו-add_run היה כותב אותם כטקסט גלוי בקובץ שנפתח לעריכה.
+            add_rich(p, b.get("h2") or b.get("h3"), 10.5,
+                     RGBColor.from_string(s.get("color", "#333333").lstrip('#').upper()))
+            for r in p.runs: r.bold = True
         elif "img" in b:
             # ה-data-URI מפוענח בחזרה לתמונה מוטמעת. הרוחב מוגבל לרוחב טור
             # (כ-88 מ"מ בפריסה דו-טורית) כדי שלא תישבר הפריסה.
@@ -134,10 +135,12 @@ for s in DATA["sections"]:
                 p = doc.add_paragraph(); rtl(p)
                 p.paragraph_format.space_after = Pt(1.5)
                 parts = str(it).split(" :: ")
-                head = re.sub(r'\s*⟦[^⟧]*⟧', '', parts[0])
-                r = p.add_run("▪ " + head)
+                r = p.add_run("▪ ")
                 r.bold = True; r.font.size = Pt(9.5); r.font.name = 'Arial'
                 r._element.rPr.rFonts.set(qn('w:cs'), 'Arial')
+                n0 = len(p.runs)                 # ראו ההערה בכותרות למעלה
+                add_rich(p, parts[0], 9.5)
+                for rr in p.runs[n0:]: rr.bold = True
                 if len(parts) > 1:
                     d = p.add_run(" — ")
                     d.font.size = Pt(9.5); d.font.name = 'Arial'
