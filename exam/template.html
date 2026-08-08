@@ -55,7 +55,10 @@ dt::after{content:" — ";font-weight:400;color:#7a828c}
 em{font-style:normal;background:#fff2b8;padding:0 1px;border-radius:2px}
 .fig{margin:1mm 0 1.6mm;break-inside:avoid;text-align:center}
 .fig img{max-width:100%;max-height:46mm;height:auto;border:1px solid #d7dce1;border-radius:2px}
-.ptxt{margin:0 0 1.1mm;break-inside:avoid;color:#2b3138}
+/* פסקאות שהודבקו לוורד בלי תבליט קיבלו מרווח כפול מזה של הפריטים,
+   והעמודים האחרונים נראו מרווחים מדי. כאן הן מיושרות לאותה צפיפות.
+   תבליט ותלייה נוסו ונפסלו: הם הוסיפו גלישות שורה ועמוד שלם. */
+.ptxt{margin:0 0 .5mm;break-inside:avoid;color:#2b3138}
 .warn{background:#fdeaea;border-right:2.5px solid #d92b2b;padding:1.2mm 2mm;
       margin:1.2mm 0;break-inside:avoid;border-radius:0 2.5px 2.5px 0}
 .warn b{color:#a51b1b}
@@ -200,7 +203,7 @@ DATA.sections.forEach(function(sec,si){
   var bd, pg;
   /* נמדד גובה התוכן של ה-body, לא של העמוד: ל-.pg יש overflow:hidden
      ולכן scrollHeight שלו שווה תמיד ל-clientHeight ואינו מעיד על מילוי. */
-  if(lastBd && lastBd.scrollHeight < lastBd.parentNode.clientHeight*0.60){
+  if(lastBd && lastBd.scrollHeight < lastBd.parentNode.clientHeight*0.72){
     bd = lastBd; pg = bd.parentNode;
     var rule = E('div',{'class':'secbreak','style':'--c:'+sec.color});
     rule.innerHTML = '<b>'+sec.name+'</b><span>'+(sec.sub||'')+'</span>';

@@ -31,7 +31,14 @@ def encode_image(blob):
     im = Image.open(io.BytesIO(blob))
     if im.width > MAXW:
         im = im.resize((MAXW, max(1, round(im.height * MAXW / im.width))), Image.LANCZOS)
-    if im.mode not in ("RGB", "L"):
+    # שקיפות חייבת להיות מורכבת על לבן ולא מומרת ישירות ל-RGB: המרה ישירה
+    # ממלאת את השקוף בשחור, וכל הדיאגרמות עם הרקע השקוף יצאו מלבנים שחורים
+    # שרואים בהם רק את הקווים הלבנים.
+    if im.mode in ("RGBA", "LA", "P") or "transparency" in im.info:
+        im = im.convert("RGBA")
+        bg = Image.new("RGBA", im.size, (255, 255, 255, 255))
+        im = Image.alpha_composite(bg, im).convert("RGB")
+    elif im.mode != "RGB":
         im = im.convert("RGB")
     buf = io.BytesIO(); im.save(buf, "PNG", optimize=True)
     data, mime = buf.getvalue(), "image/png"
