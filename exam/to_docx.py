@@ -7,7 +7,7 @@
 
 הרצה:  node -e "...content.json..."  &&  python to_docx.py
 """
-import io, json, os, re, sys
+import base64, io, json, os, re, sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import docx
@@ -95,6 +95,18 @@ for s in DATA["sections"]:
             r.bold = True; r.font.size = Pt(10.5); r.font.name = 'Arial'
             r._element.rPr.rFonts.set(qn('w:cs'), 'Arial')
             r.font.color.rgb = RGBColor.from_string(s.get("color", "#333333").lstrip('#').upper())
+        elif "img" in b:
+            # ה-data-URI מפוענח בחזרה לתמונה מוטמעת. הרוחב מוגבל לרוחב טור
+            # (כ-88 מ"מ בפריסה דו-טורית) כדי שלא תישבר הפריסה.
+            try:
+                head, b64 = b["img"].split(",", 1)
+                bio = io.BytesIO(base64.b64decode(b64))
+                w_mm = min(86, max(30, b.get("w", 600) / 8.0))
+                par = doc.add_paragraph(); rtl(par)
+                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                par.add_run().add_picture(bio, width=Mm(w_mm))
+            except Exception as e:
+                print("!! תמונה לא הוטמעה:", type(e).__name__)
         elif "p" in b:
             par = doc.add_paragraph(); rtl(par)
             add_rich(par, b["p"], 9.5)

@@ -53,6 +53,8 @@ dt::after{content:" — ";font-weight:400;color:#7a828c}
 .n{color:#0b4f9e;font-weight:700;font-feature-settings:"tnum"}
 .q{color:#3d4650;font-style:italic}
 em{font-style:normal;background:#fff2b8;padding:0 1px;border-radius:2px}
+.fig{margin:1mm 0 1.6mm;break-inside:avoid;text-align:center}
+.fig img{max-width:100%;max-height:46mm;height:auto;border:1px solid #d7dce1;border-radius:2px}
 .ptxt{margin:0 0 1.1mm;break-inside:avoid;color:#2b3138}
 .warn{background:#fdeaea;border-right:2.5px solid #d92b2b;padding:1.2mm 2mm;
       margin:1.2mm 0;break-inside:avoid;border-radius:0 2.5px 2.5px 0}
@@ -139,6 +141,10 @@ function block(b){
   /* פסקת טקסט חופשי — מגיעה מוורד שנערך ביד, שם לא כל שורה היא
      פריט "מונח — הגדרה". */
   if(b.p) return E('div',{'class':'ptxt'},rt(b.p));
+  /* דיאגרמות וצילומי טבלאות מהמצגות. הגובה מוגבל כדי שתמונה בודדת
+     לא תבלע טור שלם — במגבלת 5 דפים זה יקר מדי. */
+  if(b.img){var f=E('figure',{'class':'fig'});
+    f.appendChild(E('img',{src:b.img,alt:''}));return f;}
   if(b.tbl){
     var t=E('table'),th=E('tr');
     (b.tbl.head||[]).forEach(function(c){th.appendChild(E('th',{},rt(c)));});

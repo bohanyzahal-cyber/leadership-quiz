@@ -15,9 +15,31 @@
 """
 import io, os, re, sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+import base64
 import docx
 from docx.table import Table
 from docx.text.paragraph import Paragraph
+from PIL import Image
+
+BLIP = '{http://schemas.openxmlformats.org/drawingml/2006/main}blip'
+EMBED = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed'
+MAXW = 680          # רוחב טור בחוברת ~85 מ"מ; מעבר לזה זה בזבוז בייטים בלבד
+
+def encode_image(blob):
+    """מכווץ לרוחב הדפסה ומחזיר data-URI. דיאגרמות נשארות PNG (קווים חדים),
+       וצילומים עוברים ל-JPEG כשה-PNG יוצא כבד."""
+    im = Image.open(io.BytesIO(blob))
+    if im.width > MAXW:
+        im = im.resize((MAXW, max(1, round(im.height * MAXW / im.width))), Image.LANCZOS)
+    if im.mode not in ("RGB", "L"):
+        im = im.convert("RGB")
+    buf = io.BytesIO(); im.save(buf, "PNG", optimize=True)
+    data, mime = buf.getvalue(), "image/png"
+    if len(data) > 55000:
+        b2 = io.BytesIO(); im.save(b2, "JPEG", quality=78, optimize=True)
+        if len(b2.getvalue()) < len(data):
+            data, mime = b2.getvalue(), "image/jpeg"
+    return "data:%s;base64,%s" % (mime, base64.b64encode(data).decode()), im.width, im.height
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = sys.argv[1] if len(sys.argv) > 1 else None
@@ -97,6 +119,21 @@ for ch in doc.element.body.iterchildren():
         continue
     if tag != 'p': continue
     p = Paragraph(ch, doc)
+
+    # תמונות: דיאגרמות וצילומי טבלאות מהמצגות. הן יושבות בתוך פסקה,
+    # ולעיתים בפסקה שכל תוכנה הוא התמונה — ולכן נבדקות לפני בדיקת הטקסט.
+    blips = ch.findall('.//' + BLIP)
+    if blips and cur is not None:
+        for b in blips:
+            rid = b.get(EMBED)
+            part = doc.part.rels[rid].target_part if rid in doc.part.rels else None
+            if part is None: continue
+            try:
+                uri, w, h = encode_image(part.blob)
+            except Exception as e:
+                print("!! תמונה נכשלה (%s): %s" % (rid, type(e).__name__)); continue
+            flush_items(); blocks.append(("img", (uri, w, h)))
+
     txt = fixup(rich(p))
     if not txt: continue
     plain = re.sub(r'\*\*', '', txt).strip()
@@ -149,6 +186,9 @@ for (name, color, sub), blocks in secs:
             L.append('{h2:"%s"},' % esc(val))
         elif kind == 'p':
             L.append('{p:"%s"},' % esc(val))
+        elif kind == 'img':
+            uri, w, h = val
+            L.append('{img:"%s",w:%d,h:%d},' % (uri, w, h))
         elif kind == 'tbl':
             head, rows = val
             L.append('{tbl:{head:[%s],rows:[' % ",".join('"%s"' % esc(c) for c in head))
@@ -166,7 +206,8 @@ io.open(OUT, "w", encoding="utf-8").write("\n".join(L))
 
 n_items = sum(len(v) for _, b in secs for k, v in b if k == 'items')
 n_tbl = sum(1 for _, b in secs for k, v in b if k == 'tbl')
+n_img = sum(1 for _, b in secs for k, v in b if k == 'img')
 print("נכתב:", OUT)
-print("מקטעים: %d · פריטים: %d · טבלאות: %d" % (len(secs), n_items, n_tbl))
+print("מקטעים: %d · פריטים: %d · טבלאות: %d · תמונות: %d" % (len(secs), n_items, n_tbl, n_img))
 for (n, _, _), b in secs:
     print("   %-22s פריטים %3d" % (n, sum(len(v) for k, v in b if k == 'items')))
