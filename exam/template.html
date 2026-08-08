@@ -7,11 +7,11 @@
 /* ---------- בסיס ---------- */
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:#8a8f96}
-body{font:10.6px/1.33 "Segoe UI","Arial Hebrew",Arial,sans-serif;color:#12161c;direction:rtl}
+body{font:8.9px/1.27 "Segoe UI","Arial Hebrew",Arial,sans-serif;color:#12161c;direction:rtl}
 
 /* ---------- עמוד ---------- */
 /* A4 = 210×297mm. הריפוד הימני רחב יותר — שם הכריכה/הסיכה. */
-.pg{position:relative;width:209.9mm;height:296.8mm;padding:10mm 8mm 7mm 13mm;
+.pg{position:relative;width:209.9mm;height:296.8mm;padding:8mm 6mm 6mm 11mm;
     background:#fff;margin:0 auto 7mm;overflow:hidden;
     box-shadow:0 2px 10px rgba(0,0,0,.35)}
 .pg.over{outline:3px solid #d92b2b}
@@ -30,54 +30,59 @@ body{font:10.6px/1.33 "Segoe UI","Arial Hebrew",Arial,sans-serif;color:#12161c;d
 
 /* לשונית צד — המיקום האנכי משתנה לפי הנושא, כך שבערימת דפים
    נראות "מדרגות" וניתן לדפדף ישר לנושא בלי לקרוא. */
-.tab{position:absolute;left:0;width:11mm;background:var(--c,#333);color:#fff;
+.tab{position:absolute;left:0;width:9mm;background:var(--c,#333);color:#fff;
      display:flex;align-items:center;justify-content:center;
      writing-mode:vertical-rl;font-size:9.5px;font-weight:700;letter-spacing:.4px;
      padding:2mm 0;border-radius:3px 0 0 3px}
 
 /* ---------- תוכן ---------- */
-.body{margin-top:5mm;column-gap:5.5mm}
+.body{margin-top:4mm;column-gap:4.5mm}
 .body.c2{column-count:2;column-rule:1px solid #dfe3e8}
-h2{font-size:11.6px;color:#fff;background:var(--c,#333);padding:1mm 2mm;
+h2{font-size:9.9px;color:#fff;background:var(--c,#333);padding:1mm 2mm;
    border-radius:2.5px;margin:0 0 1.6mm;break-after:avoid}
 h2:not(:first-child){margin-top:3mm}
-h3{font-size:10.4px;color:var(--c,#333);margin:1.9mm 0 .8mm;break-after:avoid;
+h3{font-size:9px;color:var(--c,#333);margin:1.9mm 0 .8mm;break-after:avoid;
    border-bottom:1px dotted #c3c9d0;padding-bottom:.6mm}
 h3:first-child{margin-top:0}
 dl{margin:0 0 1.2mm}
-dt{font-weight:700;font-size:10.5px;display:inline}
+dt{font-weight:700;font-size:8.9px;display:inline}
 dd{display:inline;margin:0}
-dl>div{margin-bottom:.65mm;break-inside:avoid;text-indent:-3.2mm;padding-right:3.2mm}
+dl>div{margin-bottom:.5mm;break-inside:avoid;text-indent:-3.2mm;padding-right:3.2mm}
 dt::before{content:"▪ ";color:var(--c,#333);font-weight:700}
 dt::after{content:" — ";font-weight:400;color:#7a828c}
 .n{color:#0b4f9e;font-weight:700;font-feature-settings:"tnum"}
 .q{color:#3d4650;font-style:italic}
 em{font-style:normal;background:#fff2b8;padding:0 1px;border-radius:2px}
+.ptxt{margin:0 0 1.1mm;break-inside:avoid;color:#2b3138}
 .warn{background:#fdeaea;border-right:2.5px solid #d92b2b;padding:1.2mm 2mm;
       margin:1.2mm 0;break-inside:avoid;border-radius:0 2.5px 2.5px 0}
 .warn b{color:#a51b1b}
 
 /* טבלאות */
-table{border-collapse:collapse;width:100%;font-size:9.6px;margin:0 0 1.5mm;break-inside:avoid}
+table{border-collapse:collapse;width:100%;font-size:8.2px;margin:0 0 1.2mm;break-inside:avoid}
 th{background:var(--c,#333);color:#fff;text-align:right;padding:1mm 2mm;font-size:10px}
 td{border-bottom:1px solid #dfe3e8;padding:.9mm 2mm;vertical-align:top}
 tr:nth-child(even) td{background:#f6f8fa}
 td.k{font-weight:700;white-space:nowrap;color:#0b4f9e;font-feature-settings:"tnum"}
 
 /* ---------- שער ---------- */
-.cover{text-align:center;padding-top:24mm}
-.cover h1{font-size:30px;letter-spacing:-.5px;margin-bottom:2mm}
-.cover .sub{font-size:13px;color:#5b6470;margin-bottom:12mm}
-.toc{text-align:right;max-width:150mm;margin:0 auto}
-.toc a{display:flex;align-items:baseline;gap:2mm;text-decoration:none;color:#12161c;
-       padding:1.5mm 2mm;border-radius:3px;font-size:13px}
+.secbreak{column-span:all;border-top:2.5px solid var(--c,#333);margin:3mm 0 2mm;
+  padding-top:1.2mm;display:flex;justify-content:space-between;align-items:baseline}
+.secbreak b{font-size:12px;color:var(--c,#333)}
+.secbreak span{font-size:8px;color:#7a828c}
+.coverbar{column-span:all;height:41mm;overflow:hidden;border-bottom:2px solid #333;
+  margin-bottom:2.5mm;padding-bottom:1mm}
+.cover{text-align:right}
+.cover h1{font-size:15px;letter-spacing:-.3px;margin:0 0 .5mm;display:inline-block}
+.cover .sub{font-size:8.4px;color:#5b6470;margin:0 0 1.5mm}
+.toc{display:flex;flex-wrap:wrap;gap:1mm 3mm;margin:1mm 0 1.5mm}
+.toc a{display:inline-flex;align-items:center;gap:1mm;text-decoration:none;color:#222;font-size:8.4px}
 .toc a:nth-child(odd){background:#f2f5f8}
 .toc .sw{width:4mm;height:4mm;border-radius:2px;flex:none}
 .toc .nm{flex:1;font-weight:700}
-.toc .dots{flex:1;border-bottom:1.5px dotted #b9c0c8;transform:translateY(-2px)}
+.toc .dots{display:none}
 .toc .pn{font-weight:700;color:#0b4f9e;font-feature-settings:"tnum"}
-.tip{max-width:150mm;margin:10mm auto 0;background:#f2f5f8;border-radius:4px;
-     padding:4mm 5mm;font-size:11px;line-height:1.55}
+.tip{font-size:7.8px;line-height:1.3;color:#3d4650;background:#f2f5f8;border-right:2px solid #333;padding:1mm 2mm;border-radius:0 2px 2px 0}
 .tip b{display:block;margin-bottom:1.5mm;font-size:12px}
 
 /* ---------- מפתח ---------- */
@@ -131,6 +136,9 @@ function block(b){
   if(b.h2) return E('h2',{},rt(b.h2));
   if(b.h3) return E('h3',{},rt(b.h3));
   if(b.warn) return E('div',{'class':'warn'},rt(b.warn));
+  /* פסקת טקסט חופשי — מגיעה מוורד שנערך ביד, שם לא כל שורה היא
+     פריט "מונח — הגדרה". */
+  if(b.p) return E('div',{'class':'ptxt'},rt(b.p));
   if(b.tbl){
     var t=E('table'),th=E('tr');
     (b.tbl.head||[]).forEach(function(c){th.appendChild(E('th',{},rt(c)));});
@@ -174,9 +182,27 @@ function newPage(sec,cont){
 }
 function fits(pg){return pg.scrollHeight<=pg.clientHeight+1;}
 
+/* השער מוזרק לגוף העמוד הראשון לפני התוכן, ולא כעמוד נפרד: במגבלת
+   5 דפים עמוד שלם לשער הוא 10% מהחוברת. הוא נוסף כאן, לפני מילוי
+   העמוד, כדי שבדיקת ההתאמה תדחוף את התוכן העודף לעמוד הבא. */
+var coverHost=null, lastBd=null;
 DATA.sections.forEach(function(sec,si){
   sec.idx=si;
-  var bd=newPage(sec,false), pg=bd.parentNode;
+  /* מקטע חדש ממשיך בעמוד הנוכחי אם נשאר בו מקום של ממש. בלי זה כל מקטע
+     פותח עמוד, וסופי המקטעים הותירו שלושה עמודים מלאים ב-14%-37% —
+     בזבוז שלא ניתן להרשות כשהמגבלה היא 5 דפים. */
+  var bd, pg;
+  /* נמדד גובה התוכן של ה-body, לא של העמוד: ל-.pg יש overflow:hidden
+     ולכן scrollHeight שלו שווה תמיד ל-clientHeight ואינו מעיד על מילוי. */
+  if(lastBd && lastBd.scrollHeight < lastBd.parentNode.clientHeight*0.60){
+    bd = lastBd; pg = bd.parentNode;
+    var rule = E('div',{'class':'secbreak','style':'--c:'+sec.color});
+    rule.innerHTML = '<b>'+sec.name+'</b><span>'+(sec.sub||'')+'</span>';
+    bd.appendChild(rule);
+  } else {
+    bd = newPage(sec,false); pg = bd.parentNode;
+  }
+  if(si===0){ coverHost=E('div',{'class':'coverbar'}); bd.insertBefore(coverHost,bd.firstChild); }
   sec.blocks.forEach(function(b){
     var el=block(b);
     bd.appendChild(el);
@@ -213,17 +239,18 @@ DATA.sections.forEach(function(sec,si){
       }
     }
   });
+  lastBd = bd;          /* לשימוש המקטע הבא, אם יישאר מקום בעמוד */
 });
 
 /* ---- מספור, שער ומפתח ---- */
 var first={};
 pages.forEach(function(p,i){
-  p.querySelector('.pgn').innerHTML='עמ׳ <b>'+(i+2)+'</b>';
+  p.querySelector('.pgn').innerHTML='עמ׳ <b>'+(i+1)+'</b>';
   var nm=p.querySelector('.hd b').textContent;
-  if(first[nm]===undefined)first[nm]=i+2;
+  if(first[nm]===undefined)first[nm]=i+1;
 });
 
-var cover=E('div',{'class':'pg'});
+var cover=E('div',{});
 cover.innerHTML='<div class="cover"><h1>מנהיגות בניהול</h1>'+
   '<div class="sub">חומר פתוח למבחן · בר-אילן<br>'+
   '<b>נבנה מהסיכום המקוצר למבחן</b> — כל החומר בדפי A4, עם לשוניות ניווט ומפתח א״ב</div></div>';
@@ -236,16 +263,8 @@ DATA.sections.forEach(function(s){
 });
 cover.querySelector('.cover').appendChild(toc);
 cover.querySelector('.cover').appendChild(E('div',{'class':'tip'},
-  '<b>איך מנווטים כאן מהר</b>'+rt(
-  '__שני הפרקים הראשונים הם מה שתפתחו בו הכי הרבה__ — **מילון ראשי התיבות וטבלת כל המספרים**, '+
-  'ואחריו **הביבליוגרפיה** (⟨4⟩ שאלות במבחן). שאר הפרקים לפי נושא. '+
-  'הלשוניות בשוליים השמאליים יורדות מדרגה-מדרגה לפי סדר הפרקים — בערימת דפים '+
-  'רואים אותן מהצד ומדפדפים ישר לפרק, בלי לקרוא כותרות. '+
-  'בסוף החוברת **מפתח מונחים לפי א״ב** עם מספרי עמודים. '+
-  '⟨מספרים⟩ מודגשים בכחול · __הדגשה צהובה__ = נקודה שהמרצה חזר עליה · '+
-  '«מירכאות אלכסוניות» = ציטוט מהכיתה.')));
-out.insertBefore(cover,out.firstChild);
-cover.appendChild(E('div',{'class':'pgn'},'עמ׳ <b>1</b>'));
+  '<b>איך מנווטים מהר</b> '+rt('הלשוניות בשוליים יורדות מדרגה לפי סדר הפרקים — בערימת דפים רואים אותן מהצד ומדפדפים ישר לפרק. בסוף — **מפתח מונחים לפי א״ב** עם מספרי עמודים. __הדגשה צהובה__ = דגש של המרצה · «מירכאות» = ציטוט · ⟨מספרים⟩ בכחול.')));
+if(coverHost) coverHost.appendChild(cover.firstChild);
 
 /* מפתח א״ב — נבנה מהמונחים שסומנו, כך שמספרי העמודים תמיד נכונים */
 var terms={};
@@ -258,14 +277,14 @@ pages.forEach(function(p,i){
     keys.forEach(function(k){
       k=k.trim();
       if(k.length<2||k.length>44)return;
-      (terms[k]=terms[k]||[]).push(i+2);
+      (terms[k]=terms[k]||[]).push(i+1);
     });
   });
 });
 var keys=Object.keys(terms).sort(function(a,b){return a.localeCompare(b,'he');});
 var ixSec={name:'מפתח',color:'#3d4650',sub:'לפי א״ב',idx:DATA.sections.length-1};
 /* המפתח מתפרס על פני כמה עמודים בדיוק כמו התוכן — אחרת הוא גולש. */
-var ixFirst=pages.length+2;          /* לשורת התוכן שתתווסף בהמשך */
+var ixFirst=pages.length+1;          /* לשורת התוכן שתתווסף בהמשך */
 var ibd=newPage(ixSec,false), ipg=ibd.parentNode, idx=E('div',{'class':'idx'});
 ibd.appendChild(idx);
 keys.forEach(function(k){
@@ -278,7 +297,7 @@ keys.forEach(function(k){
     idx=E('div',{'class':'idx'}); ibd.appendChild(idx); idx.appendChild(row);
   }
 });
-pages.forEach(function(p,i){var e=p.querySelector('.pgn');if(e)e.innerHTML='עמ׳ <b>'+(i+2)+'</b>';});
+pages.forEach(function(p,i){var e=p.querySelector('.pgn');if(e)e.innerHTML='עמ׳ <b>'+(i+1)+'</b>';});
 
 /* המפתח נבנה אחרי שהשער כבר נוצר, ולכן שורתו מתווספת לתוכן העניינים רק כאן */
 toc.appendChild(E('a',{href:'#'},

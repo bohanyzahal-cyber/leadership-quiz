@@ -95,6 +95,9 @@ for s in DATA["sections"]:
             r.bold = True; r.font.size = Pt(10.5); r.font.name = 'Arial'
             r._element.rPr.rFonts.set(qn('w:cs'), 'Arial')
             r.font.color.rgb = RGBColor.from_string(s.get("color", "#333333").lstrip('#').upper())
+        elif "p" in b:
+            par = doc.add_paragraph(); rtl(par)
+            add_rich(par, b["p"], 9.5)
         elif "warn" in b:
             p = doc.add_paragraph(); rtl(p)
             add_rich(p, "⚠ " + b["warn"], 9, RGBColor(0xA5, 0x1B, 0x1B))
