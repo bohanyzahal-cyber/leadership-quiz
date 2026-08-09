@@ -66,9 +66,11 @@ em{font-style:normal;background:#fff2b8;padding:0 1px;border-radius:2px}
 /* טבלאות */
 table.wide{column-span:all;font-size:8.6px}
 table.wide td,table.wide th{padding:.5mm .8mm;line-height:1.25}
+/* הריפוד צמצם: אחרי שהוחזרו לתאים הפסקאות שנחתכו בייבוא, הטבלאות גדלו
+   בכ-47% מעמוד והחוברת חזרה ל-11. ריפוד של שורה ב-13 שורות הוא סנטימטרים. */
 table{border-collapse:collapse;width:100%;font-size:8.2px;margin:0 0 1.2mm;break-inside:avoid}
-th{background:var(--c,#333);color:#fff;text-align:right;padding:1mm 2mm;font-size:10px}
-td{border-bottom:1px solid #dfe3e8;padding:.9mm 2mm;vertical-align:top}
+th{background:var(--c,#333);color:#fff;text-align:right;padding:.7mm 1.4mm;font-size:9.4px}
+td{border-bottom:1px solid #dfe3e8;padding:.55mm 1.4mm;vertical-align:top}
 tr:nth-child(even) td{background:#f6f8fa}
 td.k{font-weight:700;white-space:nowrap;color:#0b4f9e;font-feature-settings:"tnum"}
 

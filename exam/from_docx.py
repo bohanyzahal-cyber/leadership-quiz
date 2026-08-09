@@ -97,6 +97,23 @@ def rich(par):
     s = re.sub(r'[\t ]{2,}', ' ', s)           # טאבים ששימשו ליישור בוורד
     return s.strip()
 
+def cell_text(c):
+    """כל הפסקאות שבתא, ולא רק הראשונה.
+
+    תא בוורד מחזיק לעיתים כמה פסקאות — שם הסגנון בשורה אחת, ההסבר
+    בשורה שאחריה. הגרסה הקודמת קראה c.paragraphs[0] בלבד, ו-20 תאים
+    איבדו את המשכם בשקט: הדוגמאות הצבאיות של הרסי ובלנשארד (טירונים,
+    חיילים ותיקים, סוף מסלול), תיאורי המשבצות בסריג הניהולי, ותיאורי
+    הטיפוסים של אדיג'ס.
+    """
+    parts = [p for p in (rich(x).strip() for x in c.paragraphs) if p]
+    out = ""
+    for p in parts:
+        # פסקאות בוורד הן שורות נפרדות. מחברים ב-· כדי לשמור על ההפרדה,
+        # אלא אם הקודמת נקטעה באמצע משפט — ואז רווח בלבד.
+        out += p if not out else ((" " if out[-1] in ",;:־–—" else " · ") + p)
+    return out
+
 def esc(s):
     return s.replace('\\', '\\\\').replace('"', '\\"')
 
@@ -206,7 +223,7 @@ for ch in doc.element.body.iterchildren():
     tag = ch.tag.split('}')[1]
     if tag == 'tbl':
         tb = Table(ch, doc)
-        rows = [[rich(c.paragraphs[0]) if c.paragraphs else "" for c in r.cells] for r in tb.rows]
+        rows = [[cell_text(c) for c in r.cells] for r in tb.rows]
         rows = [r for r in rows if any(x.strip() for x in r)]
         if rows and cur:
             flush_items()
