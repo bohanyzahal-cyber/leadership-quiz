@@ -75,7 +75,7 @@ r.bold = True; r.font.size = Pt(17); r.font.name = 'Arial'
 r._element.rPr.rFonts.set(qn('w:cs'), 'Arial')
 sub = doc.add_paragraph(); rtl(sub)
 add_rich(sub, "נבנה מ«סיכום קורס מנהיגות מקוצר למבחן». "
-              "נושא המוטיבציה ירד מהמבחן ואינו נכלל. "
+              "פרק המוטיבציה שבסיכום המקוצר טרם נכלל כאן. "
               "**קובץ זה נועד לעריכה** — הגרסה להדפסה היא קובץ ה-HTML.", 9)
 two_columns(sec, 2)
 
