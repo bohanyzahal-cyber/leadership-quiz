@@ -58,14 +58,7 @@ OUT = os.path.join(HERE, "content.js")
 # «מצבית וטווח מלא» אחרון בכוונה: הוא הנושא שנשאר בו הכי הרבה מקום
 # בעמוד האחרון (כ-58%), ושם יושב מפתח המונחים. כשהוא היה חמישי,
 # המפתח נחת באמצע החוברת.
-SECTIONS = [
- ("יסודות וקלאסיות",     "#37474f", "התנהגות ארגונית · פיול · טיילור · בירוקרטיה"),
- ("אורגניות ומודרניות",  "#2e7d32", "האות'ורן · מאיו · X/Y · TQM · מערכת · תלות"),
- ("אדיג'ס",              "#6a1b9a", "PAEI · ארבעה סגנונות · מחזור חיים"),
- ("מנהיגות ותכונות",     "#ad1457", "הגדרות · כוח · התכונות · אוהיו · הסריג"),
- ("צוות, אישיות ושאלות", "#4527a0", "טאקמן · קבוצה וצוות · Big Five · שאלות"),
- ("מצבית וטווח מלא",     "#ef6c00", "פידלר · הרסי ובלנשארד · בס ואבוליו"),
-]
+SECTIONS = [('יסודות וגישות קלאסיות', '#37474f', 'ניהול · ארגון · פיול · טיילור · וובר'), ('אורגניות וגישות מודרניות', '#2e7d32', 'האות׳ורן · מאיו · X/Y · TQM · מערכת ותלות'), ('אדיג׳ס וסגנונות ניהול', '#6a1b9a', 'PAEI · אופקי זמן · מתחים · נורמות'), ('מנהיגות כוח והשפעה', '#ad1457', 'מנהיג ומנהל · בסיסי כוח · שש טקטיקות'), ('תכונות ואישיות', '#4527a0', 'מיומנויות · מקללנד · BFI · מבחני אישיות'), ('הגישה ההתנהגותית', '#1565c0', 'מישיגן · אוהיו · הסריג · קונפליקטים'), ('פידלר ומשאבים קוגניטיביים', '#ef6c00', 'מצב · LPC · התאמה · לחץ ואינטליגנציה'), ('רדין נתיב מטרה והרסי', '#00838f', 'מטריצות מצב · חסמים · בשלות כפיפים'), ('מודל הטווח המלא', '#5d4037', 'בס ואבוליו · התנהגות ומונהגים · MLQ'), ('צוותים ויישום במקרים', '#455a64', 'קבוצה וצוות · שלבים · חשיבת יחד · דולי וגיורא')]
 SEC_BY_NAME = {n: (c, s) for n, c, s in SECTIONS}
 # הכותרת שהמשתמש נתן למקטע הרביעי, אחרי שערך אותו ידנית
 ALIAS = {"תיאוריית התכונות - מנהיגות ותכונות": "מנהיגות ותכונות"}
@@ -222,6 +215,9 @@ def open_sec(name):
 for ch in doc.element.body.iterchildren():
     tag = ch.tag.split('}')[1]
     if tag == 'tbl':
+        # Navigation tables are regenerated from navigation.json, not coursework.
+        if ch.xpath('./w:tblPr/w:tblCaption[starts-with(@w:val,"ExamNav")]'):
+            continue
         tb = Table(ch, doc)
         rows = [[cell_text(c) for c in r.cells] for r in tb.rows]
         rows = [r for r in rows if any(x.strip() for x in r)]
@@ -232,6 +228,8 @@ for ch in doc.element.body.iterchildren():
         continue
     if tag != 'p': continue
     p = Paragraph(ch, doc)
+    if p.style.name.startswith('ExamNav'):
+        continue
 
     # תמונות: דיאגרמות וצילומי טבלאות מהמצגות. הן יושבות בתוך פסקה,
     # ולעיתים בפסקה שכל תוכנה הוא התמונה — ולכן נבדקות לפני בדיקת הטקסט.
@@ -263,7 +261,8 @@ for ch in doc.element.body.iterchildren():
     for line in raw.split("\n"):
         line = line.strip()
         if not line: continue
-        qs = re.split(r'(?=(?:\*\*)?ש\s*[.,]\s)', line)
+        # A question marker must begin a word. Do not split חדש. or מגבש.
+        qs = re.split(r'(?<![א-ת])(?=(?:\*\*)?ש\s*[.,]\s)', line)
         qs = [q.strip() for q in qs if q.strip()]
         segments.extend(qs if len(qs) > 1 else [line])
 
@@ -275,7 +274,7 @@ for ch in doc.element.body.iterchildren():
         # ככותרות-משנה שמקבצות את שאלות המבחן לפי נושא ("אדיג'ס", "בס ואבוליו"),
         # ובלעדי התנאי הזה כל אחת מהן הייתה פותחת מקטע חדש ועמוד חדש.
         name = ALIAS.get(plain, plain)
-        if name in SEC_BY_NAME and name not in used_sections:
+        if (name in SEC_BY_NAME or sz == 12.5) and name not in used_sections:
             used_sections.add(name); open_sec(name); continue
         if cur is None:                          # שער לפני המקטע הראשון
             continue
@@ -321,7 +320,7 @@ L = ['/* תוכן חוברת החומר הפתוח — מנהיגות בניהו
      '',
      '   טקסט עשיר:  **מודגש**  __הדגשה צהובה__  «ציטוט»  ⟨מספר⟩',
      '   ⟦כינוי⟧ בכותרת פריט — לא מוצג, אך נכנס למפתח הא״ב.            */',
-     '{sections:[', '']
+     '{updated:"3.10.2026",navigation:'+io.open(os.path.join(HERE,"navigation.json"),encoding="utf-8").read().strip()+',sections:[', '']
 for (name, color, sub), blocks in secs:
     L.append('/* ══════════════ %s */' % name)
     L.append('{name:"%s", color:"%s", sub:"%s", cols:2, blocks:[' % (esc(name), color, esc(sub)))
@@ -347,6 +346,21 @@ for (name, color, sub), blocks in secs:
     L.append(']},'); L.append('')
 L.append(']}')
 io.open(OUT, "w", encoding="utf-8").write("\n".join(L))
+
+# Keep the Word export input in sync with edits imported from Word.
+import json
+data = {"updated": "3.10.2026", "navigation": json.load(io.open(os.path.join(HERE,"navigation.json"),encoding="utf-8")), "sections": []}
+for (name, color, sub), source_blocks in secs:
+    section = {"name": name, "color": color, "sub": sub, "cols": 2, "blocks": []}
+    for kind, value in source_blocks:
+        if kind == 'tbl':
+            value = {"head": value[0], "rows": value[1]}
+        elif kind == 'img':
+            section['blocks'].append({"img": value[0], "w": value[1], "h": value[2]})
+            continue
+        section['blocks'].append({kind: value})
+    data['sections'].append(section)
+io.open(os.path.join(HERE, "content.json"), "w", encoding="utf-8").write(json.dumps(data, ensure_ascii=False, indent=2))
 
 n_items = sum(len(v) for _, b in secs for k, v in b if k == 'items')
 n_tbl = sum(1 for _, b in secs for k, v in b if k == 'tbl')

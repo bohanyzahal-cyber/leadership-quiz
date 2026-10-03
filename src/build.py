@@ -3,7 +3,7 @@
 הרצה:  python build.py      (מתוך התיקייה הזו)
 כותב גם ל-leadership-quiz/index.html וגם לעותק הנוח בתיקיית הקורס.
 """
-import os, sys, re, glob
+import os, sys, re, glob, subprocess
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 HERE   = os.path.dirname(os.path.abspath(__file__))
@@ -24,11 +24,23 @@ tpl  = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
 bank = "\n".join(open(f, encoding="utf-8").read() for f in bank_files())
 html = tpl.replace("/*__BANK__*/", bank)
 
+# Reject malformed JavaScript before replacing the working quiz.
+try:
+    for script in re.findall(r'<script\b[^>]*>([\s\S]*?)</script>', html):
+        check = subprocess.run(["node", "--check"], input=script, capture_output=True,
+                               text=True, encoding="utf-8")
+        if check.returncode:
+            sys.exit("בדיקת תחביר נכשלה; הבוחן הקיים נשמר:\n" + check.stderr[:1500])
+except FileNotFoundError:
+    print("(בדיקת התחביר דילגה — נדרש node)")
+
 def for_course_folder(page):
     """העותק שיושב בתיקיית הקורס נמצא רמה אחת מעל leadership-quiz, ושם
     לחוברת יש שם אחר. בלי ההחלפה הזו הקישור אליה שבור."""
-    return page.replace('href="חומר-פתוח.html"',
-                        'href="חומר פתוח - מנהיגות בניהול.html"')
+    return (page.replace('href="חומר-פתוח.html"',
+                         'href="חומר פתוח - מנהיגות בניהול.html"')
+                .replace('href="podcast/index.html"',
+                         'href="leadership-quiz/podcast/index.html"'))
 
 for i, t in enumerate(TARGETS):
     page = html if i == 0 else for_course_folder(html)
@@ -54,7 +66,7 @@ for k, v in sorted(srcs.items(), key=lambda x: -x[1]):
     print("  %-16s %3d" % (k, v))
 
 # פיזור התשובה הנכונה בקוד המקור (האפליקציה ממילא מערבבת אותן בכל סבב)
-cs = re.findall(r',c:(\d),e:"', bank)
+cs = re.findall(r',c:(\d|\[[\d,]+\]),e:"', bank)
 dist = {}
 for c in cs:
     dist[c] = dist.get(c, 0) + 1
@@ -85,7 +97,7 @@ def update_readme():
     src_line = " · ".join("%s (%d)" % (k, v) for k, v in sorted(srcs.items(), key=lambda x: -x[1]))
     block = (
         "<!-- STATS:START — נוצר אוטומטית על ידי src/build.py, אין לערוך ידנית -->\n"
-        "**%d שאלות** בפורמט המבחן — רב-ברירתי (אמריקאי), 4 תשובות לשאלה.\n\n"
+        "**%d שאלות תרגול** רב־ברירתיות.\n\n"
         "%s\n\n"
         "**לפי מקור:** %s\n"
         % (len(objs), "\n".join(lines), src_line)
@@ -104,14 +116,21 @@ eval(fs.readFileSync(process.argv[2],'utf8'));
 /* דפוסים תלויי-מיקום: האפליקציה מערבבת את סדר האפשרויות בכל סבב,
    ולכן מסיח כמו "כל התשובות נכונות" או "תשובות א'+ב'" נשבר. */
 const POS=/כל התשובות נכונות|כל ההיגדים נכונים|כל הנ["״']ל|תשובות? א['׳']\s*\+|א['׳']\s*\+\s*ב['׳']|אף תשובה אינה|כל האמור לעיל/;
+/* שאלות המבחן של הכיתה המקבילה נשמרות בנוסח המקורי: מותרות בהן 2–4 אפשרויות,
+   שתי תשובות נכונות ותשובה כמו "כל ההיגדים נכונים" (האפליקציה משאירה אותה אחרונה). */
+const XSRC='מבחן הכיתה המקבילה';
 const err=[], seen={};
 BANK.forEach((q,i)=>{
   const at=`#${i} ${(q.q||'').slice(0,40)}`;
+  const X=q.s===XSRC, n=Array.isArray(q.o)?q.o.length:0;
+  const cs=Array.isArray(q.c)?q.c:[q.c];
   if(!q.t||!q.s||!q.q||!q.e)             err.push(at+' — שדה חסר');
-  if(!Array.isArray(q.o)||q.o.length!==4) err.push(at+' — אין בדיוק 4 אפשרויות');
-  else if(new Set(q.o).size!==4)          err.push(at+' — אפשרות כפולה');
-  if(typeof q.c!=='number'||q.c<0||q.c>3) err.push(at+' — c מחוץ לתחום');
-  if((q.o||[]).some(o=>POS.test(o)))      err.push(at+' — מסיח תלוי-מיקום');
+  if(X && !q.x)                           err.push(at+' — שאלת מבחן בלי הסימון x');
+  if(X ? (n<2||n>4) : n!==4)              err.push(at+' — מספר אפשרויות שגוי');
+  else if(new Set(q.o).size!==n)          err.push(at+' — אפשרות כפולה');
+  if(!cs.length||cs.some(c=>typeof c!=='number'||c<0||c>=n)||(!X&&Array.isArray(q.c)))
+                                          err.push(at+' — c מחוץ לתחום');
+  if(!X && (q.o||[]).some(o=>POS.test(o))) err.push(at+' — מסיח תלוי-מיקום');
   /* כפילות ניסוח: נוצרת כשמאריכים מסיח בטקסט שכבר מופיע בסופו. */
   (q.o||[]).forEach((o)=>{
     const w=String(o).split(/\s+/);
@@ -141,6 +160,7 @@ BANK.forEach((q,i)=>{
   const sc=q.o.map(o=>{const O=toks(o);let n=0;O.forEach(x=>{if(E.has(x))n++;});
                        return O.size? n/Math.sqrt(O.size):0;});
   const best=sc.indexOf(Math.max(...sc));
+  if(Array.isArray(q.c)) return;
   if(best!==q.c && sc[best]-sc[q.c] > 1.5)
     key.push('#'+i+' מסומן '+q.c+' אך ההסבר מתאים ל-'+best+' — '+(q.q||'').slice(0,44));
 });
@@ -176,10 +196,11 @@ except Exception as e:
 CHECK = r"""
 const fs=require('fs');
 eval(fs.readFileSync(process.argv[2],'utf8'));
-const n=BANK.length, rank=[0,0,0,0];
+const OWN=BANK.filter(q=>q.s!=='מבחן הכיתה המקבילה');
+const n=OWN.length, rank=[0,0,0,0];
 let long=0, short=0, outlierHit=0;
 const outliers=[];
-BANK.forEach((q,qi)=>{
+OWN.forEach((q,qi)=>{
   const L=q.o.map(o=>o.length), max=Math.max(...L), min=Math.min(...L);
   if(L.indexOf(max)===q.c) long++;
   if(L.indexOf(min)===q.c) short++;

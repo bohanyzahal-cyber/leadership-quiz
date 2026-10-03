@@ -11,7 +11,7 @@
   --okBg:#e6f4ea; --okBd:#9bd3ad; --okTx:#1a6b1a;
   --errBg:#fceaea; --errBd:#e6a3a3; --errTx:#b23030;
   --warnTx:#854f0b; --warnBg:#faeeda;
-  --clsTx:#0f6e56; --clsBg:#e1f5ee;
+  --clsTx:#0f6e56; --clsBg:#e1f5ee; --xTx:#5b3aa6; --xBg:#ece6fa;
   --chipBg:#efeee9;
 }
 @media (prefers-color-scheme:dark){
@@ -21,7 +21,7 @@
     --okBg:#16331f; --okBd:#2f6b3f; --okTx:#7fd49a;
     --errBg:#3a1d1d; --errBd:#7a3535; --errTx:#e89393;
     --warnTx:#fac775; --warnBg:#4a2b06;
-    --clsTx:#9fe1cb; --clsBg:#0d4438;
+    --clsTx:#9fe1cb; --clsBg:#0d4438; --xTx:#cdbdf5; --xBg:#33255c;
     --chipBg:#2f2f2a;
   }
 }
@@ -31,7 +31,7 @@ html.dark{
   --okBg:#16331f; --okBd:#2f6b3f; --okTx:#7fd49a;
   --errBg:#3a1d1d; --errBd:#7a3535; --errTx:#e89393;
   --warnTx:#fac775; --warnBg:#4a2b06;
-  --clsTx:#9fe1cb; --clsBg:#0d4438;
+  --clsTx:#9fe1cb; --clsBg:#0d4438; --xTx:#cdbdf5; --xBg:#33255c;
   --chipBg:#2f2f2a;
 }
 html.light{
@@ -40,7 +40,7 @@ html.light{
   --okBg:#e6f4ea; --okBd:#9bd3ad; --okTx:#1a6b1a;
   --errBg:#fceaea; --errBd:#e6a3a3; --errTx:#b23030;
   --warnTx:#854f0b; --warnBg:#faeeda;
-  --clsTx:#0f6e56; --clsBg:#e1f5ee;
+  --clsTx:#0f6e56; --clsBg:#e1f5ee; --xTx:#5b3aa6; --xBg:#ece6fa;
   --chipBg:#efeee9;
 }
 *{box-sizing:border-box}
@@ -172,12 +172,15 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
     <a class="aid" href="חומר פתוח - מנהיגות בניהול.docx">
       <i>📝</i><span><b>אותה חוברת בוורד</b> · למי שרוצה לערוך, להוסיף או להוריד</span>
     </a>
+    <a class="aid" href="podcast/index.html">
+      <i>🎧</i><span><b>פודקאסט לתרגול</b> · 8 פרקי חזרה בנושאי הקורס, עם שאלות, תמלילים ומקורות</span>
+    </a>
   </div>
 </header>
 <div id="app"></div>
 <div id="print"></div>
 <div class="foot" style="text-align:center;color:var(--muted);font-size:12px;margin-top:24px;">
-  לתרגול לימודי בלבד · נבנה מסיכום הקורס המקוצר למבחן
+  לתרגול לימודי בלבד · לפי מצגות ושאלוני קורס 111762
 </div>
 </div>
 <script>
@@ -186,49 +189,61 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
 "use strict";
 var LET=["א","ב","ג","ד"];
 var SRC_META={
-  "סיכום":{bg:"var(--clsBg)",fg:"var(--clsTx)",full:"סיכום הקורס"},
-  "שאלות מבחן":{bg:"var(--warnBg)",fg:"var(--warnTx)",full:"שאלות ממבחנים קודמים"},
-  "מחוץ להיקף":{bg:"var(--errBg)",fg:"var(--errTx)",full:"⚠ מחוץ להיקף המבחן"}
+  "חומרי הקורס":{bg:"var(--clsBg)",fg:"var(--clsTx)",full:"חומרי קורס 111762"},
+  "תרגול חדש":{bg:"var(--warnBg)",fg:"var(--warnTx)",full:"תרגול נוסף לפי חומרי הקורס"},
+  "מבחן הכיתה המקבילה":{bg:"var(--xBg)",fg:"var(--xTx)",full:"שאלת מבחן · הכיתה המקבילה"}
 };
-var OUT_OF_SCOPE="מחוץ להיקף";
+/* שאלות מבחן: קוויז החזרה ושאלות המבחן של הכיתה המקבילה אצל אותה מרצה. הן מסומנות x:1.
+   שאלה שמקורה רק שם מקבלת את המקור XSRC; שאלה שיש לה גם מקור בחומר שלנו נשארת "חומרי הקורס". */
+var XSRC="מבחן הכיתה המקבילה";
 var app=document.getElementById("app");
 var TOPICS=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.t]){s[b.t]=1;TOPICS.push(b.t);}}); })();
 var SOURCES=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.s]){s[b.s]=1;SOURCES.push(b.s);}}); })();
 
 var sel={topics:TOPICS.slice(),src:"exam",mode:"practice",shuffle:true,minutes:0,count:0,pcount:20,balanced:true};
+/* A link from an episode selects its topic while retaining the verified-source filter. */
+try{
+  var requestedTopic=new URLSearchParams(window.location.search).get("topic");
+  if(TOPICS.indexOf(requestedTopic)>=0)sel.topics=[requestedTopic];
+}catch(e){}
 var quiz=[],idx=0,score=0,answered=false,wrong=[],ansMap=[],timer=null,timeLeft=0;
 
 function E(tag,attr,html){var e=document.createElement(tag);if(attr)for(var k in attr)e.setAttribute(k,attr[k]);if(html!=null)e.innerHTML=html;return e;}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
-/* היקפי לימוד. מה שיצא מההיקף לא נמחק — הוא נכון עובדתית — אלא הוצא
-   מברירת המחדל: נושאים שנשמטו מהסיכום המקוצר (רדין, וורום-ייטון,
-   נתיב-מטרה, צדק ארגוני).
-
-   מוטיבציה מחוץ להיקף לפי מקורות הקורס: הסילבוס מונה 12 נושאים ואין בהם
-   מוטיבציה, ובמצגות אין אף תיאוריה שלה. הסיכום המקוצר שממנו נבנה המאגר
-   כן כולל פרק כזה — ומכאן שהוא כנראה של כיתה מקבילה. */
+/* המאגר נשען על חומרי הקורס שלנו: המצגות והשאלונים שבאתר הקורס וההקלטות של
+   השיעורים. היוצא מן הכלל הוא מסלול שאלות המבחן של הכיתה המקבילה, שהמשתמש ביקש
+   להשאיר ב־3.10.2026. ההיקף אינו הודעה רשמית על היקף הבחינה. */
 var SCOPE={
-  core:{name:"שאלות מבחן",  hint:"רק מה שנוסח מרשימת שאלות המבחן שבסוף הסיכום — הכי קרוב לנוסח האמיתי",
-        f:function(s){return s==="שאלות מבחן";}},
-  exam:{name:"היקף המבחן",  hint:"מה שנלמד בקורס לפי הסילבוס. בלי מוטיבציה ובלי מה שנשמט מהסיכום המקוצר",
-        f:function(s){return s!==OUT_OF_SCOPE;}},
-  all: {name:"הכל",         hint:"מוסיף מוטיבציה ואת הנושאים שנשמטו (רדין, וורום-ייטון, נתיב-מטרה, צדק). להעמקה",
-        f:function(){return true;}}
+  exam:{name:"כל השאלות", hint:"חומר הכיתה שלנו לפי המצגות, השאלונים וההקלטות, ועוד מסלול שאלות המבחן של הכיתה המקבילה",
+        f:function(){return true;}},
+  xam:{name:"שאלות מבחן", hint:"שאלות מקוויז החזרה ומהמבחן של הכיתה המקבילה, אצל אותה מרצה. הן אינן חומר של הכיתה שלנו וחלקן אינן מופיעות במצגות שלנו; הן כאן כי ייתכן שיחזרו במבחן",
+        f:function(q){return !!q.x;}},
+  core:{name:"תרגול חדש", hint:"ניקוד שאלונים, טקטיקות השפעה, צוותים, מקרי הקורס ומבחני האישיות שנוספו בעדכון",
+        f:function(q){return q.s==="תרגול חדש";}}
 };
-function srcOK(s){ return SCOPE[sel.src] ? SCOPE[sel.src].f(s) : s===sel.src; }
-function filterBank(){return BANK.filter(function(x){return sel.topics.indexOf(x.t)>=0 && srcOK(x.s);});}
-function countScope(k){return BANK.filter(function(x){return SCOPE[k].f(x.s);}).length;}
+function srcOK(q){ return SCOPE[sel.src] ? SCOPE[sel.src].f(q) : q.s===sel.src; }
+function modeOK(q){return sel.mode!=="exam" || !q.practiceOnly;}
+function filterBank(){return BANK.filter(function(x){return sel.topics.indexOf(x.t)>=0 && srcOK(x) && modeOK(x);});}
+function countScope(k){return BANK.filter(function(x){return SCOPE[k].f(x) && modeOK(x);}).length;}
 
 /* אחרי הגדרת SCOPE — הכותרת מונה את שאלות ההיקף, לא את כל המאגר. */
 document.getElementById("sub").textContent =
-  countScope("exam")+" שאלות בהיקף המבחן — גישות ניהוליות, תיאוריות מנהיגות, ניהול צוות ו-Big Five. "+
-  "המבחן בחומר פתוח: מותר להיכנס עם 5 דפים (10 עמודים), והחוברת היא בדיוק 10 עמודים.";
+  BANK.filter(function(x){return x.s!==XSRC;}).length+" שאלות מחומר הכיתה שלנו · מסלול של "+countScope("xam")+
+  " שאלות מבחן מהכיתה המקבילה · חוברת של 10 עמודים להדפסה על 5 דפים דו־צדדיים.";
 /* מערבב את סדר התשובות בכל שאלה, כדי שהתשובה הנכונה לא תהיה תמיד באותו מקום */
+/* בשאלות המבחן יש לעיתים 2–3 תשובות, שתי תשובות שסומנו כנכונות, או תשובה כמו
+   "כל ההיגדים נכונים". תשובה כזו נשארת אחרונה, והשאר מתערבבות. */
+var PIN=/כל התשובות|כל ההיגדים|אף תשובה|יש יותר מתשובה אחת/;
 function prepQ(q){
-  var order=shuffle([0,1,2,3]);
-  var opts=order.map(function(i){return q.o[i];});
-  return {t:q.t,s:q.s,q:q.q,o:opts,c:order.indexOf(q.c),e:q.e};
+  var free=[],pin=[];
+  for(var i=0;i<q.o.length;i++)(PIN.test(q.o[i])?pin:free).push(i);
+  var order=shuffle(free).concat(pin);
+  var cs=(q.c instanceof Array?q.c:[q.c]).map(function(k){return order.indexOf(k);}).sort();
+  return {t:q.t,s:q.s,x:q.x,q:q.q,o:order.map(function(i){return q.o[i];}),c:cs[0],cs:cs,
+          e:q.e+(q.ref?" מקור: "+q.ref+".":"")};
 }
+function isC(q,i){return i!=null && q.cs.indexOf(i)>=0;}
+function cLet(q){return q.cs.map(function(k){return LET[k];}).join(" או ");}
 function buildQuiz(){
   var arr=filterBank().map(prepQ);
   if(sel.shuffle)shuffle(arr);
@@ -260,13 +275,13 @@ function setup(){
   var c=E("div",{"class":"card"});
 
   c.appendChild(E("div",{"class":"note"},
-    "<b>המבחן בחומר פתוח — מותר להיכנס עם 5 דפים (10 עמודים).</b> החוברת בראש העמוד היא בדיוק 10 עמודים, "+
-    "כך שאפשר להדפיס אותה דו-צדדי ולהיכנס איתה. אפשר גם להדפיס מכאן את השאלות (הכפתורים בתחתית).<br>"+
-    "<b>מוטיבציה אינה בהיקף</b> — הסילבוס מונה 12 נושאים ואין בהם מוטיבציה, "+
-    "ובמצגות הקורס אין אף תיאוריית מוטיבציה. 92 השאלות שמורות תחת «הכל».<br>"+
-    "<b>איך לתרגל:</b> ב<b>מצב תרגול</b> מקבלים משוב והסבר אחרי כל שאלה, ובסוף הסבב אפשר לתרגל רק את השגויות. "+
-    "ב<b>סימולציית מבחן</b> עונים על הכל ורק בסוף מקבלים ציון וסקירה של כל שגיאה.<br>"+
-    "<b>מאיפה להתחיל:</b> בהיקף <b>שאלות מבחן</b> — אלו נוסחו מרשימת השאלות שבסוף הסיכום."));
+    "<b>חומר הכיתה שלנו, ועוד שאלות המבחן של הכיתה המקבילה.</b> השאלות נשענות על המצגות והשאלונים שבאתר הקורס ועל ההקלטות של השיעורים שלנו, ובכל הסבר יש הפניה למקור. היוצא מן הכלל הוא המסלול <b>שאלות מבחן</b>: שאלות מקוויז החזרה ומהמבחן של הכיתה המקבילה אצל אותה מרצה, שמסומנות בתווית סגולה. הן נשארו כי ייתכן שיחזרו במבחן, וחלקן אינן מופיעות בחומר שלנו. מחזור חיי הארגון ומבחני האישיות נכללים לפי השקפים שהוצגו בשיעורים 11.8, 25.8 ו־1.9, וגרף אדיג׳ס הוצלב עם ההסבר בכיתה. הסיכום המקיף של הכיתה עדיין לא צורף.<br>"+
+    "<b>חומר פתוח:</b> מותר להביא 5 דפים דו־צדדיים, לפי אישור שקיבלתם מהמרצה. החוברת כוללת 10 עמודי A4.<br>"+
+    "<b>מבנה הבחינה:</b> רב־ברירתית, לפי הסבר המרצה בהקלטת 8.9, דקות 62–63. מספר השאלות והיקף החומר טרם אושרו.<br>"+
+    "חישוב היפוך BFI לפי המפתח הכתוב מיועד לתרגול הכלי, ומופיע רק במצב תרגול; בהקלטת 25.8 נאמר שלא יהיו חישובים כאלה בבחינה.<br>"+
+    "<b>איך לתרגל:</b> בתרגול מקבלים משוב מיד ויכולים לחזור לשגויות. בסימולציה מקבלים ציון וסקירה בסיום.<br>"+
+    "<b>כדאי להתחיל:</b> בסבב מאוזן לפי חומרי הקורס, ואז לעבור על מסלול שאלות המבחן ולבחור נושא שבו טעיתם.<br>"+
+    "<b>מיפוי החומר:</b> הסילבוס משמש להצלבה. נושא שחסר בקבצים הזמינים אינו מסומן אוטומטית כמי שירד מהמבחן; הסיכומים שלנו והנחיות המרצה יבהירו את ההיקף."));
 
   /* mode */
   var row1=E("div",{"class":"toolbar"});
@@ -289,8 +304,10 @@ function setup(){
   ball.onclick=function(){sel.topics=allOn?[]:TOPICS.slice();setup();};
   row2.appendChild(ball);
   TOPICS.forEach(function(t){
+    var available=BANK.filter(function(q){return q.t===t && srcOK(q) && modeOK(q);}).length;
+    if(!available)return;
     var on=sel.topics.indexOf(t)>=0;
-    var b=E("button",{"class":"chip"+(on?" active":"")},t+" <small>"+countBy("t",t)+"</small>");
+    var b=E("button",{"class":"chip"+(on?" active":"")},t+" <small>"+available+"</small>");
     b.onclick=function(){
       var i=sel.topics.indexOf(t);
       if(i>=0)sel.topics.splice(i,1);else sel.topics.push(t);
@@ -303,13 +320,13 @@ function setup(){
   /* היקף לימוד */
   var row0=E("div",{"class":"toolbar"});
   row0.appendChild(E("span",{"class":"lbl"},"היקף:"));
-  ["core","exam","all"].forEach(function(k){
+  ["exam","xam","core"].forEach(function(k){
     var b=E("button",{"class":"chip"+(sel.src===k?" active":"")},
       SCOPE[k].name+" <small>"+countScope(k)+"</small>");
     b.onclick=function(){sel.src=k;setup();};
     row0.appendChild(b);
   });
-  /* בעבר הופיעו כאן גם כפתורים לכל מקור בנפרד. הם היו כפילות של שלושת
+  /* בעבר הופיעו כאן גם כפתורים לכל מקור בנפרד. הם היו כפילות של
      ההיקפים ורק הוסיפו רעש — נמחקו אחרי שהמסך נקרא "מסובך". */
   c.appendChild(row0);
   if(SCOPE[sel.src])
@@ -352,20 +369,6 @@ function setup(){
   info.innerHTML="<span>נבחרו <b>"+n+"</b> שאלות</span>";
   c.appendChild(info);
 
-  /* אזהרה גלויה כשהבחירה כוללת חומר שאינו בסיכום המקוצר. בלי זה
-     ההבדל נשען רק על תווית קטנה ליד השאלה, וקל לפספס אותו. */
-  var nOut=filterBank().filter(function(q){return q.s===OUT_OF_SCOPE;}).length;
-  if(nOut){
-    var w=E("div",{"class":"note"});
-    w.style.background="var(--errBg)";
-    w.style.borderColor="var(--errBd)";
-    w.innerHTML="<b style='color:var(--errTx)'>⚠ "+nOut+" מהשאלות שנבחרו הן מחוץ להיקף המבחן</b> — "+
-      "נושאים שהיו בסיכום הישן ונשמטו מהסיכום המקוצר (רדין, וורום-ייטון, נתיב-מטרה, צדק ארגוני ועוד). "+
-      "הן מסומנות בתווית אדומה, ואינן מופיעות בחוברת החומר הפתוח. "+
-      "לתרגול לפי הסיכום החדש בלבד — בחרו בהיקף <b>היקף המבחן</b>.";
-    c.appendChild(w);
-  }
-
   var go=E("button",{"class":"btn btn-pri"},
     sel.mode==="exam"?"התחלת סימולציית מבחן":"התחלת תרגול");
   go.style.width="100%";
@@ -403,13 +406,12 @@ function printSheet(withAnswers){
         arr.length+" שאלות · "+(SCOPE[sel.src]?SCOPE[sel.src].name:sel.src)+
         " · "+(withAnswers?"עם תשובות והסברים":"ללא תשובות")+"</div></div>";
   arr.forEach(function(q,i){
-    h+='<div class="pq"><div class="pt">'+esc(q.t)+
-       (q.s===OUT_OF_SCOPE?' · <b>⚠ מחוץ להיקף המבחן</b>':'')+'</div>'+
+    h+='<div class="pq"><div class="pt">'+esc(q.t)+(q.x?" · שאלת מבחן, הכיתה המקבילה":"")+'</div>'+
        '<div><span class="pn">'+(i+1)+'.</span> '+esc(q.q)+'</div>';
     q.o.forEach(function(o,k){ h+='<div class="po">'+LET[k]+". "+esc(o)+"</div>"; });
     if(withAnswers)
-      h+='<div class="po pa">✔ '+LET[q.c]+". "+esc(q.o[q.c])+'</div>'+
-         '<div class="po pe">'+esc(q.e)+"</div>";
+      h+='<div class="po pa">✔ '+(q.c instanceof Array?q.c:[q.c]).map(function(k){return LET[k]+". "+esc(q.o[k]);}).join(" · ")+'</div>'+
+         '<div class="po pe">'+esc(q.e+(q.ref?" מקור: "+q.ref+".":""))+"</div>";
     h+="</div>";
   });
   box.innerHTML=h;
@@ -424,7 +426,8 @@ function bar(frac){
 }
 function metaRow(q){
   var r=E("div",{"class":"qmeta"});
-  r.innerHTML='<span class="pill">'+q.t+'</span><span class="pill" style="background:'+srcBg(q.s)+';color:'+srcFg(q.s)+'">'+((SRC_META[q.s]||{}).full||q.s)+'</span>';
+  r.innerHTML='<span class="pill">'+q.t+'</span><span class="pill" style="background:'+srcBg(q.s)+';color:'+srcFg(q.s)+'">'+((SRC_META[q.s]||{}).full||q.s)+'</span>'+
+    (q.x&&q.s!==XSRC?'<span class="pill" style="background:'+srcBg(XSRC)+';color:'+srcFg(XSRC)+'">'+SRC_META[XSRC].full+'</span>':"");
   return r;
 }
 function topBar(extraHtml){
@@ -440,75 +443,104 @@ function topBar(extraHtml){
 }
 
 /* ---------- practice mode ---------- */
+/* אפשר לשוטט בין השאלות: הקודמת, הבאה ומפת שאלות. תשובה שנבחרה נשמרת, וכשחוזרים לשאלה
+   רואים שוב את הסימון ואת ההסבר. */
 function practiceStart(){
   quiz=buildQuiz();
   /* אותה דגימה מאוזנת של המבחן — סבב קצר שמרוכז בשניים-שלושה נושאים
      אינו מייצג, והמאגר אינו מאוזן בין הנושאים. */
   if(sel.pcount&&quiz.length>sel.pcount)
     quiz=shuffle(balancedPick(quiz,sel.pcount));
-  idx=0;score=0;wrong=[];ansMap=[];
-  pRender();
+  pBegin();
 }
-function pRender(){
-  if(idx>=quiz.length)return pResults();
-  var q=quiz[idx];
+function pBegin(){idx=0;ansMap=new Array(quiz.length);pRender();}
+function pTally(){
+  var ok=0,bad=[],n=0;
+  quiz.forEach(function(q,i){ if(ansMap[i]==null)return; n++; if(isC(q,ansMap[i]))ok++; else bad.push(q); });
+  return {ok:ok,bad:bad,n:n};
+}
+function pRender(keepScroll){
+  var q=quiz[idx],a=ansMap[idx],done=a!=null,T=pTally(),last=idx===quiz.length-1;
   app.innerHTML="";
   var c=E("div",{"class":"card"});
   c.appendChild(topBar());
   var st=E("div",{"class":"stats"});
-  function statsHtml(done){
-    var seen=idx+(done?1:0);
-    return "<span>שאלה <b>"+(idx+1)+"</b> / <b>"+quiz.length+"</b></span>"+
-      "<span>נכונות: <b>"+score+"</b></span>"+
-      "<span>שגויות: <b>"+wrong.length+"</b></span>"+
-      "<span class='spacer'></span><span>הצלחה: <b>"+(seen?Math.round(score/seen*100)+"%":"—")+"</b></span>";
-  }
-  st.innerHTML=statsHtml(false);
+  st.innerHTML="<span>שאלה <b>"+(idx+1)+"</b> / <b>"+quiz.length+"</b></span>"+
+    "<span>נכונות: <b>"+T.ok+"</b></span>"+
+    "<span>שגויות: <b>"+T.bad.length+"</b></span>"+
+    "<span class='spacer'></span><span>הצלחה: <b>"+(T.n?Math.round(T.ok/T.n*100)+"%":"—")+"</b></span>";
   c.appendChild(st);
-  c.appendChild(bar(idx/quiz.length));
+  c.appendChild(bar(T.n/quiz.length));
   c.appendChild(metaRow(q));
   c.appendChild(E("div",{"class":"qtext"},q.q));
 
   var box=E("div");
-  answered=false;
   q.o.forEach(function(txt,i){
-    var b=E("button",{"class":"opt"});
+    var cls="opt";
+    if(done)cls+=" locked"+(isC(q,i)?" correct":i===a?" wrong":"");
+    var b=E("button",{"class":cls});
     b.innerHTML='<span class="ltr">'+LET[i]+'</span><span>'+txt+'</span>';
-    b.onclick=function(){
-      if(answered)return;
-      answered=true;
-      var all=box.querySelectorAll(".opt");
-      for(var k=0;k<all.length;k++)all[k].className="opt locked";
-      all[q.c].className="opt correct locked";
-      if(i===q.c){score++;}
-      else{all[i].className="opt wrong locked";wrong.push(q);}
-      st.innerHTML=statsHtml(true);
-      var ex=E("div",{"class":"expl"});
-      ex.innerHTML='<span class="tag">'+(i===q.c?"נכון · ":"התשובה הנכונה: "+LET[q.c]+" · ")+'</span>'+q.e;
-      c.insertBefore(ex,navRow);
-      nextBtn.disabled=false;nextBtn.className="btn btn-pri";
-    };
+    b.onclick=function(){ if(ansMap[idx]!=null)return; ansMap[idx]=i; pRender(true); };
     box.appendChild(b);
   });
   c.appendChild(box);
+  if(done){
+    var ex=E("div",{"class":"expl"});
+    ex.innerHTML='<span class="tag">'+(isC(q,a)?"נכון · ":"התשובה הנכונה: "+cLet(q)+" · ")+'</span>'+q.e;
+    c.appendChild(ex);
+  }
 
-  var navRow=E("div",{"class":"nav"});
-  var nextBtn=E("button",{"class":"btn"},idx===quiz.length-1?"סיום וצפייה בציון":"השאלה הבאה ←");
-  nextBtn.disabled=true;
-  nextBtn.onclick=function(){idx++;pRender();};
-  var skip=E("button",{"class":"btn"},"דילוג");
-  skip.onclick=function(){idx++;pRender();};
-  navRow.appendChild(nextBtn);navRow.appendChild(skip);
-  c.appendChild(navRow);
+  var nav=E("div",{"class":"nav"});
+  var prev=E("button",{"class":"btn"},"→ הקודמת");
+  prev.disabled=idx===0;
+  prev.onclick=function(){idx--;pRender();};
+  var next=E("button",{"class":"btn"+(done?" btn-pri":"")},last?"סיום וצפייה בציון":done?"השאלה הבאה ←":"דילוג ←");
+  next.onclick=function(){ if(last)pResults(); else{idx++;pRender();} };
+  nav.appendChild(prev);nav.appendChild(next);
+  c.appendChild(nav);
+
+  c.appendChild(E("div",{"class":"ptitle",style:"margin-top:16px"},
+    "מפת שאלות — לחצו כדי לעבור לשאלה · ירוק: נכונה · אדום: שגויה"));
+  var pal=E("div",{"class":"palette"});
+  quiz.forEach(function(qq,i){
+    var m=ansMap[i]==null?"":isC(qq,ansMap[i])?" ok":" bad";
+    var b=E("button",{"class":"pbtn"+m+(i===idx?" cur":"")},String(i+1));
+    b.onclick=function(){idx=i;pRender();};
+    pal.appendChild(b);
+  });
+  c.appendChild(pal);
+  if(!last){
+    var fin=E("button",{"class":"btn"},"סיום הסבב וצפייה בציון");
+    fin.style.width="100%";fin.style.marginTop="14px";
+    fin.onclick=function(){
+      var un=quiz.length-T.n;
+      if(un>0&&!confirm("נותרו "+un+" שאלות שלא נענו. לסיים את הסבב?"))return;
+      pResults();
+    };
+    c.appendChild(fin);
+  }
   app.appendChild(c);
-  window.scrollTo(0,0);
+  if(!keepScroll)window.scrollTo(0,0);
 }
 function pResults(){
-  results(score,quiz.length,wrong,practiceStart,function(){
-    quiz=wrong.slice();if(sel.shuffle)shuffle(quiz);
-    idx=0;score=0;wrong=[];pRender();
+  var T=pTally();
+  results(T.ok,quiz.length,T.bad,practiceStart,function(){
+    quiz=T.bad.slice();if(sel.shuffle)shuffle(quiz);
+    pBegin();
   },null);
 }
+
+/* מקלדת, במסך של שאלה: חץ שמאלה = הבאה, חץ ימינה = הקודמת (האתר מימין לשמאל), 1-4 = בחירת תשובה */
+document.addEventListener("keydown",function(ev){
+  if(!app.querySelector(".qtext")||ev.ctrlKey||ev.metaKey||ev.altKey)return;
+  var bs=app.querySelectorAll(".nav .btn");
+  if(ev.key==="ArrowLeft"&&bs[1]&&!bs[1].disabled){ev.preventDefault();bs[1].click();}
+  else if(ev.key==="ArrowRight"&&bs[0]&&!bs[0].disabled){ev.preventDefault();bs[0].click();}
+  else if(/^[1-4]$/.test(ev.key)){
+    var o=app.querySelectorAll(".opt")[+ev.key-1];
+    if(o&&o.className.indexOf("locked")<0){ev.preventDefault();o.click();}
+  }
+});
 
 /* ---------- exam mode ---------- */
 /* דגימה מאוזנת בין נושאים: המאגר אינו מאוזן (יש נושאים עם יותר שאלות
@@ -601,7 +633,7 @@ function eRender(){
 function examSubmit(auto){
   stopTimer();
   var sc=0,wr=[];
-  quiz.forEach(function(q,i){ if(ansMap[i]===q.c)sc++; else wr.push({q:q,given:ansMap[i]}); });
+  quiz.forEach(function(q,i){ if(isC(q,ansMap[i]))sc++; else wr.push({q:q,given:ansMap[i]}); });
   results(sc,quiz.length,wr.map(function(x){return x.q;}),examStart,null,wr,auto);
 }
 
@@ -640,7 +672,7 @@ function results(sc,total,wr,onAgain,onRetryWrong,detail,auto){
       var given = x.given==null?"<i>לא נענתה</i>":LET[x.given]+". "+x.q.o[x.given];
       r.innerHTML='<div class="rq">'+x.q.q+'</div>'+
         '<div class="ra">התשובה שלך: '+given+'</div>'+
-        '<div class="rc">התשובה הנכונה: '+LET[x.q.c]+". "+x.q.o[x.q.c]+'</div>'+
+        '<div class="rc">התשובה הנכונה: '+x.q.cs.map(function(k){return LET[k]+". "+x.q.o[k];}).join(" · או · ")+'</div>'+
         '<div style="margin-top:6px;color:var(--muted)">'+x.q.e+'</div>';
       d.appendChild(r);
     });
