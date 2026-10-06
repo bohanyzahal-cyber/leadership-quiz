@@ -110,13 +110,20 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
 .btn:hover{border-color:var(--accent);}
 .btn-pri{background:var(--accent);color:#fff;border-color:var(--accent);}
 .btn:disabled{opacity:.4;cursor:not-allowed;}
-.palette{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:190px;overflow-y:auto;}
+/* 214px: בטלפון 46 השאלות של מבנה המבחן נכנסות למפה בלי גלילה (שש שורות) */
+.palette{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:214px;overflow-y:auto;}
 .pbtn{width:33px;height:33px;border-radius:8px;border:1px solid var(--border);
   background:var(--surface);color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;}
 .pbtn.cur{outline:2px solid var(--accent);outline-offset:1px;}
 .pbtn.ok{background:var(--okBg);border-color:var(--okBd);color:var(--okTx);}
 .pbtn.bad{background:var(--errBg);border-color:var(--errBd);color:var(--errTx);}
 .pbtn.ans{background:var(--accentSoft);border-color:var(--accent);color:var(--accent);}
+/* סימולציה "כמו במבחן": שאלה שנמחקה, כלומר שלא עונים עליה. מקווקו ומחוק, במפה ובשאלה עצמה. */
+.pbtn.skip{background:var(--surface2);border-style:dashed;border-color:var(--borderS);color:var(--muted);text-decoration:line-through;}
+.struck .qtext{color:var(--muted);text-decoration:line-through;}
+.struck .opt{opacity:.55;}
+.skipbtn{width:100%;margin-top:3px;padding:9px 12px;}
+.skipbtn.on{background:var(--warnBg);color:var(--warnTx);border-color:var(--warnTx);}
 .ptitle{font-size:12.5px;color:var(--muted);margin-bottom:7px;}
 .result{text-align:center;}
 .result .big{font-size:46px;font-weight:800;color:var(--accent);line-height:1.1;}
@@ -200,13 +207,19 @@ var app=document.getElementById("app");
 var TOPICS=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.t]){s[b.t]=1;TOPICS.push(b.t);}}); })();
 var SOURCES=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.s]){s[b.s]=1;SOURCES.push(b.s);}}); })();
 
-var sel={topics:TOPICS.slice(),src:"exam",mode:"practice",shuffle:true,minutes:0,count:0,pcount:20,balanced:true};
-/* A link from an episode selects its topic while retaining the verified-source filter. */
+/* מבנה הבחינה לפי מצגת החזרה למבחן שהמרצה העלתה ב־6.10.2026: 46 שאלות, עונים על 33 מהן,
+   3 שעות. חובה למחוק את 13 השאלות שלא עונים עליהן; בלי מחיקה נבדקות 33 הראשונות. */
+var REAL={total:46,answer:33,minutes:180};
+var sel={topics:TOPICS.slice(),src:"exam",mode:"practice",shuffle:true,minutes:REAL.minutes,count:REAL.total,real:true,pcount:20,balanced:true};
+/* A link from an episode selects its topic while retaining the verified-source filter.
+   בנושא יחיד אין 46 שאלות, ולכן הסימולציה שם אינה במבנה המבחן. */
 try{
   var requestedTopic=new URLSearchParams(window.location.search).get("topic");
-  if(TOPICS.indexOf(requestedTopic)>=0)sel.topics=[requestedTopic];
+  if(TOPICS.indexOf(requestedTopic)>=0){sel.topics=[requestedTopic];sel.real=false;sel.count=0;sel.minutes=0;}
 }catch(e){}
 var quiz=[],idx=0,score=0,answered=false,wrong=[],ansMap=[],timer=null,timeLeft=0;
+/* בסימולציה "כמו במבחן": skipMap מסמן את השאלות שנמחקו, ו־realRun אומר שהסבב הנוכחי במבנה הזה. */
+var skipMap=[],realRun=false;
 
 function E(tag,attr,html){var e=document.createElement(tag);if(attr)for(var k in attr)e.setAttribute(k,attr[k]);if(html!=null)e.innerHTML=html;return e;}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
@@ -252,7 +265,8 @@ function buildQuiz(){
 function srcBg(s){return (SRC_META[s]||{}).bg||"var(--surface2)";}
 function srcFg(s){return (SRC_META[s]||{}).fg||"var(--muted)";}
 function countBy(key,val){return BANK.filter(function(b){return b[key]===val;}).length;}
-function fmt(s){var m=Math.floor(s/60),x=s%60;return m+":"+(x<10?"0":"")+x;}
+/* שעון: דקות ושניות, ומשעה ומעלה גם שעות (3:00:00) */
+function fmt(s){var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+":"+(m<10?"0":""):"")+m+":"+(x<10?"0":"")+x;}
 
 /* ---------- theme ---------- */
 function initTheme(){
@@ -276,12 +290,12 @@ function setup(){
 
   c.appendChild(E("div",{"class":"note"},
     "<b>חומר הכיתה שלנו, ועוד שאלות המבחן של הכיתה המקבילה.</b> השאלות נשענות על המצגות והשאלונים שבאתר הקורס ועל ההקלטות של השיעורים שלנו, ובכל הסבר יש הפניה למקור. היוצא מן הכלל הוא המסלול <b>שאלות מבחן</b>: שאלות מקוויז החזרה ומהמבחן של הכיתה המקבילה אצל אותה מרצה, שמסומנות בתווית סגולה. הן נשארו כי ייתכן שיחזרו במבחן, וחלקן אינן מופיעות בחומר שלנו. מחזור חיי הארגון ומבחני האישיות נכללים לפי השקפים שהוצגו בשיעורים 11.8, 25.8 ו־1.9, וגרף אדיג׳ס הוצלב עם ההסבר בכיתה. הסיכום המקיף של הכיתה עדיין לא צורף.<br>"+
-    "<b>חומר פתוח:</b> מותר להביא 5 דפים דו־צדדיים, לפי אישור שקיבלתם מהמרצה. החוברת כוללת 10 עמודי A4.<br>"+
-    "<b>מבנה הבחינה:</b> רב־ברירתית, לפי הסבר המרצה בהקלטת 8.9, דקות 62–63. מספר השאלות והיקף החומר טרם אושרו.<br>"+
+    "<b>מבנה הבחינה:</b> רב־ברירתית, "+REAL.total+" שאלות, ועונים על "+REAL.answer+" מהן. חובה למחוק את "+(REAL.total-REAL.answer)+" השאלות שלא עונים עליהן, אחרת המחשב בודק את "+REAL.answer+" הראשונות. משך הבחינה 3 שעות, או כפי שיקבע מדור הבחינות. כך לפי מצגת החזרה למבחן שהמרצה העלתה לאתר הקורס ב־6.10.2026.<br>"+
+    "<b>חומר פתוח:</b> מותר להכניס 5 דפי A4 מודפסים משני הצדדים. חובה לרשום עליהם מספר תעודת זהות ולהגיש אותם לבוחנת בסיום הבחינה. החוברת כוללת 10 עמודי A4.<br>"+
     "חישוב היפוך BFI לפי המפתח הכתוב מיועד לתרגול הכלי, ומופיע רק במצב תרגול; בהקלטת 25.8 נאמר שלא יהיו חישובים כאלה בבחינה.<br>"+
-    "<b>איך לתרגל:</b> בתרגול מקבלים משוב מיד ויכולים לחזור לשגויות. בסימולציה מקבלים ציון וסקירה בסיום.<br>"+
+    "<b>איך לתרגל:</b> בתרגול מקבלים משוב מיד ויכולים לחזור לשגויות. בסימולציה מקבלים ציון וסקירה בסיום. בסימולציה <b>כמו במבחן</b> יש "+REAL.total+" שאלות ו־3 שעות, מוחקים "+(REAL.total-REAL.answer)+" שאלות, והציון מחושב מתוך "+REAL.answer+".<br>"+
     "<b>כדאי להתחיל:</b> בסבב מאוזן לפי חומרי הקורס, ואז לעבור על מסלול שאלות המבחן ולבחור נושא שבו טעיתם.<br>"+
-    "<b>מיפוי החומר:</b> הסילבוס משמש להצלבה. נושא שחסר בקבצים הזמינים אינו מסומן אוטומטית כמי שירד מהמבחן; הסיכומים שלנו והנחיות המרצה יבהירו את ההיקף."));
+    "<b>נושאי המבחן:</b> מצגת החזרה למבחן מפרטת את נושאי הקורס. שני נושאים מהרשימה עדיין אינם במאגר: אפקט הגולם ומודל קבלת ההחלטות הנורמטיבי. נושא שאינו ברשימה לא סומן כאן כמי שירד מהמבחן. ההקלטה של שיעור החזרה עדיין לא עלתה לאתר הקורס."));
 
   /* mode */
   var row1=E("div",{"class":"toolbar"});
@@ -351,12 +365,19 @@ function setup(){
     var bal=E("button",{"class":"chip"+(sel.balanced?" active":"")},"פריסה מאוזנת בין נושאים");
     bal.onclick=function(){sel.balanced=!sel.balanced;setup();};
     row4.appendChild(bal);
+    /* מבנה המבחן האמיתי: מספר השאלות והשעון נקבעים יחד. את השעון אפשר לשנות אחר כך. */
+    var rb=E("button",{"class":"chip"+(sel.real?" active":"")},"כמו במבחן: "+REAL.total+" שאלות, עונים על "+REAL.answer);
+    rb.onclick=function(){sel.real=true;sel.count=REAL.total;sel.minutes=REAL.minutes;setup();};
+    row4.appendChild(rb);
     [[25,"25 שאלות"],[40,"40 שאלות"],[0,"הכל"]].forEach(function(n){
-      var b=E("button",{"class":"chip"+(sel.count===n[0]?" active":"")},n[1]);
-      b.onclick=function(){sel.count=n[0];setup();};
+      var b=E("button",{"class":"chip"+(!sel.real&&sel.count===n[0]?" active":"")},n[1]);
+      b.onclick=function(){
+        if(sel.real&&sel.minutes===REAL.minutes)sel.minutes=0;
+        sel.real=false;sel.count=n[0];setup();
+      };
       row4.appendChild(b);
     });
-    [[0,"בלי שעון"],[30,"30 דק'"],[45,"45 דק'"],[60,"60 דק'"]].forEach(function(m){
+    [[0,"בלי שעון"],[30,"30 דק'"],[45,"45 דק'"],[60,"60 דק'"],[REAL.minutes,"3 שעות"]].forEach(function(m){
       var b=E("button",{"class":"chip"+(sel.minutes===m[0]?" active":"")},m[1]);
       b.onclick=function(){sel.minutes=m[0];setup();};
       row4.appendChild(b);
@@ -365,14 +386,20 @@ function setup(){
   c.appendChild(row4);
 
   var n=filterBank().length;
+  var realOn=sel.mode==="exam"&&sel.real, tooFew=realOn&&n<REAL.total;
+  if(realOn)
+    c.appendChild(E("div",{"class":"scopehint"},
+      "כמו במבחן: "+REAL.total+" שאלות, ועונים על "+REAL.answer+" מהן. מוחקים את "+(REAL.total-REAL.answer)+
+      " השאלות שלא עונים עליהן; מה שלא נמחק נבדק, ובלי מחיקה נבדקות "+REAL.answer+" הראשונות. הציון מחושב מתוך "+REAL.answer+"."));
   var info=E("div",{"class":"stats"});
   info.innerHTML="<span>נבחרו <b>"+n+"</b> שאלות</span>";
   c.appendChild(info);
 
   var go=E("button",{"class":"btn btn-pri"},
-    sel.mode==="exam"?"התחלת סימולציית מבחן":"התחלת תרגול");
+    sel.mode!=="exam"?"התחלת תרגול":realOn?"התחלת סימולציה כמו במבחן":"התחלת סימולציית מבחן");
   go.style.width="100%";
   if(n===0){go.disabled=true;go.textContent="בחרו לפחות נושא אחד";}
+  else if(tooFew){go.disabled=true;go.textContent="לסימולציה כמו במבחן צריך לפחות "+REAL.total+" שאלות. הוסיפו נושאים או בחרו מספר שאלות אחר";}
   go.onclick=function(){ sel.mode==="exam"?examStart():practiceStart(); };
   c.appendChild(go);
 
@@ -565,10 +592,20 @@ function examStart(){
   quiz=buildQuiz();
   if(sel.count&&quiz.length>sel.count)
     quiz=sel.balanced?shuffle(balancedPick(quiz,sel.count)):quiz.slice(0,sel.count);
-  idx=0;ansMap=new Array(quiz.length);
+  realRun=!!sel.real&&quiz.length===REAL.total;
+  idx=0;ansMap=new Array(quiz.length);skipMap=new Array(quiz.length);
   timeLeft=sel.minutes*60;
   if(sel.minutes)startTimer();
   eRender();
+}
+/* סימולציה "כמו במבחן". שאלה שנמחקה אינה נבדקת. תשובה שניתנה לפני המחיקה נשמרת,
+   וחוזרת כשמחזירים את השאלה. נבדקות 33 הראשונות מבין השאלות שלא נמחקו: מי שלא מחק
+   אף שאלה נבדק על 33 הראשונות, כפי שכתוב במצגת החזרה. */
+function nSkipped(){var n=0;for(var i=0;i<skipMap.length;i++)if(skipMap[i])n++;return n;}
+function gradedIdx(){
+  var out=[];
+  for(var i=0;i<quiz.length&&out.length<REAL.answer;i++)if(!skipMap[i])out.push(i);
+  return out;
 }
 function startTimer(){
   stopTimer();
@@ -580,27 +617,38 @@ function startTimer(){
   },1000);
 }
 function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
-function eRender(){
-  var q=quiz[idx];
+function eRender(keepScroll){
+  var q=quiz[idx],cut=realRun&&!!skipMap[idx],need=REAL.total-REAL.answer;
   app.innerHTML="";
-  var c=E("div",{"class":"card"});
+  var c=E("div",{"class":"card"+(cut?" struck":"")});
   c.appendChild(topBar(sel.minutes?'זמן שנותר: <span class="clock" id="clock">'+fmt(timeLeft)+'</span>':""));
-  var nAns=0;for(var i=0;i<ansMap.length;i++)if(ansMap[i]!=null)nAns++;
+  /* שאלה שנמחקה אינה נספרת כשאלה שנענתה, גם אם סומנה בה תשובה */
+  var nAns=0,nCut=realRun?nSkipped():0;
+  for(var i=0;i<ansMap.length;i++)if(ansMap[i]!=null&&!(realRun&&skipMap[i]))nAns++;
   var st=E("div",{"class":"stats"});
-  st.innerHTML="<span>שאלה <b>"+(idx+1)+"</b> / <b>"+quiz.length+"</b></span><span>נענו: <b>"+nAns+"</b></span>";
+  st.innerHTML="<span>שאלה <b>"+(idx+1)+"</b> / <b>"+quiz.length+"</b></span>"+
+    (realRun?"<span>נענו: <b>"+nAns+"</b> / "+REAL.answer+"</span><span>נמחקו: <b>"+nCut+"</b> / "+need+"</span>"
+            :"<span>נענו: <b>"+nAns+"</b></span>");
   c.appendChild(st);
-  c.appendChild(bar(nAns/quiz.length));
+  c.appendChild(bar(Math.min(1,nAns/(realRun?REAL.answer:quiz.length))));
   c.appendChild(metaRow(q));
+  if(cut)c.appendChild(E("div",{"class":"scopehint",style:"margin:0 0 6px"},"השאלה נמחקה ולא תיבדק. כדי לענות עליה, החזירו אותה."));
   c.appendChild(E("div",{"class":"qtext"},q.q));
 
   var box=E("div");
   q.o.forEach(function(txt,i){
-    var b=E("button",{"class":"opt"+(ansMap[idx]===i?" picked":"")});
+    var b=E("button",{"class":"opt"+(ansMap[idx]===i?" picked":"")+(cut?" locked":"")});
     b.innerHTML='<span class="ltr">'+LET[i]+'</span><span>'+txt+'</span>';
-    b.onclick=function(){ansMap[idx]=i;eRender();};
+    b.onclick=function(){ if(realRun&&skipMap[idx])return; ansMap[idx]=i;eRender(true); };
     box.appendChild(b);
   });
   c.appendChild(box);
+  if(realRun){
+    var sk=E("button",{"class":"iconbtn skipbtn"+(cut?" on":"")},
+      cut?"↩ להחזיר את השאלה":"✕ למחוק את השאלה, לא אענה עליה");
+    sk.onclick=function(){skipMap[idx]=!skipMap[idx];eRender(true);};
+    c.appendChild(sk);
+  }
 
   var nav=E("div",{"class":"nav"});
   var prev=E("button",{"class":"btn"},"→ הקודמת");
@@ -610,10 +658,12 @@ function eRender(){
   nav.appendChild(prev);nav.appendChild(next);
   c.appendChild(nav);
 
-  c.appendChild(E("div",{"class":"ptitle",style:"margin-top:16px"},"מפת שאלות — לחצו למעבר"));
+  c.appendChild(E("div",{"class":"ptitle",style:"margin-top:16px"},
+    "מפת שאלות — לחצו למעבר"+(realRun?" · סגול: נענתה · מקווקו: נמחקה":"")));
   var pal=E("div",{"class":"palette"});
   quiz.forEach(function(_,i){
-    var b=E("button",{"class":"pbtn"+(ansMap[i]!=null?" ans":"")+(i===idx?" cur":"")},String(i+1));
+    var m=realRun&&skipMap[i]?" skip":ansMap[i]!=null?" ans":"";
+    var b=E("button",{"class":"pbtn"+m+(i===idx?" cur":"")},String(i+1));
     b.onclick=function(){idx=i;eRender();};
     pal.appendChild(b);
   });
@@ -622,23 +672,48 @@ function eRender(){
   var sub=E("button",{"class":"btn btn-pri"},"הגשת המבחן");
   sub.style.width="100%";sub.style.marginTop="14px";
   sub.onclick=function(){
-    var un=quiz.length-nAns;
-    if(un>0&&!confirm("נותרו "+un+" שאלות ללא מענה. להגיש בכל זאת?"))return;
+    var msg=[];
+    if(realRun){
+      var G=gradedIdx(),open=0;
+      G.forEach(function(i){if(ansMap[i]==null)open++;});
+      if(nCut<need)msg.push("מחקתם "+nCut+" שאלות מתוך "+need+". כמו במבחן, ייבדקו "+REAL.answer+" השאלות הראשונות שלא נמחקו.");
+      if(nCut>need)msg.push("מחקתם "+nCut+" שאלות, יותר מ־"+need+". ייבדקו רק "+G.length+" שאלות, והציון יחושב מתוך "+REAL.answer+".");
+      if(open>0)msg.push("נותרו "+open+" שאלות ללא מענה מבין אלה שייבדקו.");
+    } else {
+      var un=quiz.length-nAns;
+      if(un>0)msg.push("נותרו "+un+" שאלות ללא מענה.");
+    }
+    if(msg.length&&!confirm(msg.join("\n")+(msg.length>1?"\n":" ")+"להגיש בכל זאת?"))return;
     examSubmit(false);
   };
   c.appendChild(sub);
   app.appendChild(c);
-  window.scrollTo(0,0);
+  if(!keepScroll)window.scrollTo(0,0);
 }
 function examSubmit(auto){
   stopTimer();
   var sc=0,wr=[];
-  quiz.forEach(function(q,i){ if(isC(q,ansMap[i]))sc++; else wr.push({q:q,given:ansMap[i]}); });
-  results(sc,quiz.length,wr.map(function(x){return x.q;}),examStart,null,wr,auto);
+  if(!realRun){
+    quiz.forEach(function(q,i){ if(isC(q,ansMap[i]))sc++; else wr.push({q:q,given:ansMap[i]}); });
+    results(sc,quiz.length,wr.map(function(x){return x.q;}),examStart,null,wr,auto);
+    return;
+  }
+  var G=gradedIdx(),inG={},left=[],need=REAL.total-REAL.answer,nCut=nSkipped();
+  G.forEach(function(i){
+    inG[i]=1;
+    if(isC(quiz[i],ansMap[i]))sc++; else wr.push({q:quiz[i],given:ansMap[i]});
+  });
+  /* לא נבדקו: השאלות שנמחקו, ואלה שנשארו מעבר ל־33 הראשונות כי לא נמחקו מספיק שאלות */
+  quiz.forEach(function(q,i){ if(!inG[i])left.push({q:q,given:ansMap[i],cut:!!skipMap[i]}); });
+  var note = nCut===need ? "נבדקו "+REAL.answer+" השאלות שלא מחקתם."
+           : nCut<need  ? "מחקתם "+nCut+" שאלות מתוך "+need+", ולכן נבדקו "+REAL.answer+" השאלות הראשונות שלא נמחקו. במבחן עצמו חשוב למחוק בדיוק "+need+"."
+                        : "מחקתם "+nCut+" שאלות, יותר מ־"+need+". נבדקו רק "+G.length+" שאלות, והציון מחושב מתוך "+REAL.answer+".";
+  results(sc,REAL.answer,wr.map(function(x){return x.q;}),examStart,null,wr,auto,{note:note,left:left});
 }
 
 /* ---------- results ---------- */
-function results(sc,total,wr,onAgain,onRetryWrong,detail,auto){
+/* extra, בסימולציה "כמו במבחן" בלבד: note הוא הסבר אילו שאלות נבדקו, ו־left הן השאלות שלא נבדקו. */
+function results(sc,total,wr,onAgain,onRetryWrong,detail,auto,extra){
   stopTimer();
   app.innerHTML="";
   var pct=total?Math.round(sc/total*100):0;
@@ -651,6 +726,7 @@ function results(sc,total,wr,onAgain,onRetryWrong,detail,auto){
           pct>=60?"עובר — מומלץ לחזור ולתרגל":
                   "מתחת לציון עובר — כדאי לחזור על החומר ולתרגל שוב";
   c.appendChild(E("div",{"class":"grade"},sc+" מתוך "+total+" · "+g));
+  if(extra&&extra.note)c.appendChild(E("div",{"class":"scopehint",style:"margin:-8px 0 14px"},extra.note));
 
   var nav=E("div",{"class":"nav"});
   var again=E("button",{"class":"btn btn-pri"},"סבב חדש");
@@ -688,6 +764,20 @@ function results(sc,total,wr,onAgain,onRetryWrong,detail,auto){
     });
     d2.appendChild(ul);
     app.appendChild(d2);
+  }
+  if(extra&&extra.left&&extra.left.length){
+    var d3=E("div",{"class":"card"});
+    d3.appendChild(E("div",{"class":"ptitle"},extra.left.length+" השאלות שלא נבדקו — עם התשובה הנכונה, לחזרה"));
+    extra.left.forEach(function(x){
+      var r=E("div",{"class":"rev"});
+      r.innerHTML='<div class="rq">'+x.q.q+'</div>'+
+        '<div style="color:var(--muted)">'+(x.cut?"נמחקה":"לא נמחקה, אך לא נכללה ב־"+REAL.answer+" הראשונות")+
+          (x.given==null?"":" · סימנת: "+LET[x.given]+". "+x.q.o[x.given])+'</div>'+
+        '<div class="rc">התשובה הנכונה: '+x.q.cs.map(function(k){return LET[k]+". "+x.q.o[k];}).join(" · או · ")+'</div>'+
+        '<div style="margin-top:6px;color:var(--muted)">'+x.q.e+'</div>';
+      d3.appendChild(r);
+    });
+    app.appendChild(d3);
   }
   window.scrollTo(0,0);
 }

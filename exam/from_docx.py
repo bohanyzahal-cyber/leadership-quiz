@@ -314,13 +314,17 @@ flush_items()
 if cur: secs.append((cur, blocks))
 
 # ---------- כתיבה ----------
+import json
+# תאריך העדכון נקבע במקום אחד — navigation.json — ולא כאן.
+NAV_TEXT = io.open(os.path.join(HERE,"navigation.json"),encoding="utf-8").read().strip()
+UPDATED = json.loads(NAV_TEXT)["updated"]
 L = ['/* תוכן חוברת החומר הפתוח — מנהיגות בניהול.',
      '   נבנה אוטומטית מקובץ הוורד על ידי from_docx.py — אין לערוך ידנית:',
      '   ערכו את הוורד והריצו מחדש, אחרת העריכה תידרס בייבוא הבא.',
      '',
      '   טקסט עשיר:  **מודגש**  __הדגשה צהובה__  «ציטוט»  ⟨מספר⟩',
      '   ⟦כינוי⟧ בכותרת פריט — לא מוצג, אך נכנס למפתח הא״ב.            */',
-     '{updated:"3.10.2026",navigation:'+io.open(os.path.join(HERE,"navigation.json"),encoding="utf-8").read().strip()+',sections:[', '']
+     '{updated:"'+UPDATED+'",navigation:'+NAV_TEXT+',sections:[', '']
 for (name, color, sub), blocks in secs:
     L.append('/* ══════════════ %s */' % name)
     L.append('{name:"%s", color:"%s", sub:"%s", cols:2, blocks:[' % (esc(name), color, esc(sub)))
@@ -348,8 +352,7 @@ L.append(']}')
 io.open(OUT, "w", encoding="utf-8").write("\n".join(L))
 
 # Keep the Word export input in sync with edits imported from Word.
-import json
-data = {"updated": "3.10.2026", "navigation": json.load(io.open(os.path.join(HERE,"navigation.json"),encoding="utf-8")), "sections": []}
+data = {"updated": UPDATED, "navigation": json.loads(NAV_TEXT), "sections": []}
 for (name, color, sub), source_blocks in secs:
     section = {"name": name, "color": color, "sub": sub, "cols": 2, "blocks": []}
     for kind, value in source_blocks:
