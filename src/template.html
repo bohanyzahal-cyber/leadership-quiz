@@ -228,11 +228,14 @@ function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()
    להשאיר ב־3.10.2026. ההיקף אינו הודעה רשמית על היקף הבחינה. */
 var SCOPE={
   exam:{name:"כל השאלות", hint:"חומר הכיתה שלנו לפי המצגות, השאלונים וההקלטות, ועוד מסלול שאלות המבחן של הכיתה המקבילה",
-        f:function(){return true;}},
+        f:function(q){return !q.d;}},
   xam:{name:"שאלות מבחן", hint:"שאלות מקוויז החזרה ומהמבחן של הכיתה המקבילה, אצל אותה מרצה. הן אינן חומר של הכיתה שלנו וחלקן אינן מופיעות במצגות שלנו; הן כאן כי ייתכן שיחזרו במבחן",
-        f:function(q){return !!q.x;}},
+        f:function(q){return !!q.x&&!q.d;}},
   core:{name:"תרגול חדש", hint:"ניקוד שאלונים, טקטיקות השפעה, צוותים, מקרי הקורס ומבחני האישיות שנוספו בעדכון",
-        f:function(q){return q.s==="תרגול חדש";}}
+        f:function(q){return q.s==="תרגול חדש"&&!q.d;}},
+  /* d — נושא שהמרצה הורידה מהמבחן. השאלות נשארות במאגר, אבל רק בהיקף הזה. */
+  drop:{name:"ירד מהמבחן", hint:"נושאים שהמרצה הורידה מהמבחן: המודל של רדין (שיעור 15.9.2026, דקה 22), ונתיב המטרה, המשאבים הקוגניטיביים ומודל קבלת ההחלטות הנורמטיבי (שיעור החזרה 6.10.2026, דקה 71). השאלות נשארו כאן למי שרוצה, ואינן נכללות בשאר ההיקפים ובסימולציה כמו במבחן",
+        f:function(q){return !!q.d;}}
 };
 function srcOK(q){ return SCOPE[sel.src] ? SCOPE[sel.src].f(q) : q.s===sel.src; }
 function modeOK(q){return sel.mode!=="exam" || !q.practiceOnly;}
@@ -241,7 +244,7 @@ function countScope(k){return BANK.filter(function(x){return SCOPE[k].f(x) && mo
 
 /* אחרי הגדרת SCOPE — הכותרת מונה את שאלות ההיקף, לא את כל המאגר. */
 document.getElementById("sub").textContent =
-  BANK.filter(function(x){return x.s!==XSRC;}).length+" שאלות מחומר הכיתה שלנו · מסלול של "+countScope("xam")+
+  BANK.filter(function(x){return x.s!==XSRC&&!x.d;}).length+" שאלות מחומר הכיתה שלנו · מסלול של "+countScope("xam")+
   " שאלות מבחן מהכיתה המקבילה · חוברת של 10 עמודים להדפסה על 5 דפים דו־צדדיים.";
 /* מערבב את סדר התשובות בכל שאלה, כדי שהתשובה הנכונה לא תהיה תמיד באותו מקום */
 /* בשאלות המבחן יש לעיתים 2–3 תשובות, שתי תשובות שסומנו כנכונות, או תשובה כמו
@@ -252,7 +255,7 @@ function prepQ(q){
   for(var i=0;i<q.o.length;i++)(PIN.test(q.o[i])?pin:free).push(i);
   var order=shuffle(free).concat(pin);
   var cs=(q.c instanceof Array?q.c:[q.c]).map(function(k){return order.indexOf(k);}).sort();
-  return {t:q.t,s:q.s,x:q.x,q:q.q,o:order.map(function(i){return q.o[i];}),c:cs[0],cs:cs,
+  return {t:q.t,s:q.s,x:q.x,d:q.d,q:q.q,o:order.map(function(i){return q.o[i];}),c:cs[0],cs:cs,
           e:q.e+(q.ref?" מקור: "+q.ref+".":"")};
 }
 function isC(q,i){return i!=null && q.cs.indexOf(i)>=0;}
@@ -295,7 +298,8 @@ function setup(){
     "חישוב היפוך BFI לפי המפתח הכתוב מיועד לתרגול הכלי, ומופיע רק במצב תרגול; בהקלטת 25.8 נאמר שלא יהיו חישובים כאלה בבחינה.<br>"+
     "<b>איך לתרגל:</b> בתרגול מקבלים משוב מיד ויכולים לחזור לשגויות. בסימולציה מקבלים ציון וסקירה בסיום. בסימולציה <b>כמו במבחן</b> יש "+REAL.total+" שאלות ו־3 שעות, מוחקים "+(REAL.total-REAL.answer)+" שאלות, והציון מחושב מתוך "+REAL.answer+".<br>"+
     "<b>כדאי להתחיל:</b> בסבב מאוזן לפי חומרי הקורס, ואז לעבור על מסלול שאלות המבחן ולבחור נושא שבו טעיתם.<br>"+
-    "<b>נושאי המבחן:</b> מצגת החזרה למבחן מפרטת את נושאי הקורס. שני נושאים מהרשימה עדיין אינם במאגר: אפקט הגולם ומודל קבלת ההחלטות הנורמטיבי. נושא שאינו ברשימה לא סומן כאן כמי שירד מהמבחן. ההקלטה של שיעור החזרה עדיין לא עלתה לאתר הקורס."));
+    "<b>נושאי המבחן:</b> לפי מצגת החזרה ושיעור החזרה ב־6.10.2026. המרצה הורידה מהמבחן את המודל של רדין (15.9), ואת נתיב המטרה, המשאבים הקוגניטיביים ומודל קבלת ההחלטות הנורמטיבי (6.10). השאלות עליהם עברו להיקף <b>ירד מהמבחן</b>. פידלר, הרסי ובלנשארד ואפקט הגולם נשארים.<br>"+
+    "<b>דגשים של המרצה:</b> להשאיר בדף התשובות בדיוק "+REAL.answer+" סימונים, ועדיף להחליט קודם בטופס השאלות ורק אז להעתיק. לדעת את אותיות PAEI ואת סגנון הניהול בכל שלב במחזור החיים. לדעת את השמות באנגלית של הרסי ובלנשארד: Telling, Selling, Participating, Delegating. לדעת איזו מנהיגות מתאימה לכל שלב של הצוות. שיעור חזרה נוסף עם קוויזים נקבע ל־5.11.2026 בשעה 13:00, והוא יוקלט."));
 
   /* mode */
   var row1=E("div",{"class":"toolbar"});
@@ -334,7 +338,7 @@ function setup(){
   /* היקף לימוד */
   var row0=E("div",{"class":"toolbar"});
   row0.appendChild(E("span",{"class":"lbl"},"היקף:"));
-  ["exam","xam","core"].forEach(function(k){
+  ["exam","xam","core","drop"].forEach(function(k){
     var b=E("button",{"class":"chip"+(sel.src===k?" active":"")},
       SCOPE[k].name+" <small>"+countScope(k)+"</small>");
     b.onclick=function(){sel.src=k;setup();};
@@ -433,7 +437,7 @@ function printSheet(withAnswers){
         arr.length+" שאלות · "+(SCOPE[sel.src]?SCOPE[sel.src].name:sel.src)+
         " · "+(withAnswers?"עם תשובות והסברים":"ללא תשובות")+"</div></div>";
   arr.forEach(function(q,i){
-    h+='<div class="pq"><div class="pt">'+esc(q.t)+(q.x?" · שאלת מבחן, הכיתה המקבילה":"")+'</div>'+
+    h+='<div class="pq"><div class="pt">'+esc(q.t)+(q.x?" · שאלת מבחן, הכיתה המקבילה":"")+(q.d?" · ירד מהמבחן":"")+'</div>'+
        '<div><span class="pn">'+(i+1)+'.</span> '+esc(q.q)+'</div>';
     q.o.forEach(function(o,k){ h+='<div class="po">'+LET[k]+". "+esc(o)+"</div>"; });
     if(withAnswers)
@@ -454,7 +458,8 @@ function bar(frac){
 function metaRow(q){
   var r=E("div",{"class":"qmeta"});
   r.innerHTML='<span class="pill">'+q.t+'</span><span class="pill" style="background:'+srcBg(q.s)+';color:'+srcFg(q.s)+'">'+((SRC_META[q.s]||{}).full||q.s)+'</span>'+
-    (q.x&&q.s!==XSRC?'<span class="pill" style="background:'+srcBg(XSRC)+';color:'+srcFg(XSRC)+'">'+SRC_META[XSRC].full+'</span>':"");
+    (q.x&&q.s!==XSRC?'<span class="pill" style="background:'+srcBg(XSRC)+';color:'+srcFg(XSRC)+'">'+SRC_META[XSRC].full+'</span>':"")+
+    (q.d?'<span class="pill" style="background:#f1f5f9;color:#475569">ירד מהמבחן</span>':"");
   return r;
 }
 function topBar(extraHtml){
