@@ -239,6 +239,8 @@ var SCOPE={
         f:function(q){return !!q.x&&!q.d;}},
   past:{name:"מבחן קודם", hint:"46 השאלות של מבחן קודם בקורס, לפי צילומים של טופס הבחינה. התשובות לפי הסימונים בצילום; בשאלות שלא סומנו, המפתח לפי חומר הקורס וההסבר אומר זאת. בשאלות 16, 44 ו־46 המפתח אינו ודאי",
         f:function(q){return q.s===PSRC&&!q.d;}},
+  style:{name:"בסגנון המבחן", hint:"שאלות שנכתבו לפי הסגנון של טופס המבחן הקודם: מקרה עם דמות, שאלות ׳מה אינו נכון׳, ומסיחים ממודלים אחרים בקורס. התוכן מהחומר שלנו, והמקרים מקוריים",
+        f:function(q){return !!q.y&&!q.d;}},
   core:{name:"תרגול חדש", hint:"ניקוד שאלונים, טקטיקות השפעה, צוותים, מקרי הקורס ומבחני האישיות שנוספו בעדכון",
         f:function(q){return q.s==="תרגול חדש"&&!q.d;}},
   /* d — נושא שהמרצה הורידה מהמבחן. השאלות נשארות במאגר, אבל רק בהיקף הזה. */
@@ -347,7 +349,7 @@ function setup(){
   /* היקף לימוד */
   var row0=E("div",{"class":"toolbar"});
   row0.appendChild(E("span",{"class":"lbl"},"היקף:"));
-  ["exam","xam","past","core","drop"].forEach(function(k){
+  ["exam","xam","past","style","core","drop"].forEach(function(k){
     var b=E("button",{"class":"chip"+(sel.src===k?" active":"")},
       SCOPE[k].name+" <small>"+countScope(k)+"</small>");
     b.onclick=function(){sel.src=k;setup();};
