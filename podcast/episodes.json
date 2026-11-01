@@ -588,12 +588,7 @@
     "class_summary_reviewed": false,
     "quiz_topic": "מבחן קודם",
     "quiz_scope": "past",
-    "guide_pages": [
-      [
-        9,
-        "מבחן קודם — תשובות מהירות"
-      ]
-    ],
+    "guide_pages": [],
     "sources": [
       {
         "label": "צילומי טופס בחינה קודם (46 שאלות, 22 עמודים)",
