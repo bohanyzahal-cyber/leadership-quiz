@@ -808,6 +808,9 @@ try{
   var requestedTopic=new URLSearchParams(window.location.search).get("topic");
   if(TOPICS.indexOf(requestedTopic)>=0){sel.topics=[requestedTopic];sel.real=false;sel.count=0;sel.minutes=0;}
 }catch(e){}
+/* קישור מפרק הפודקאסט על המבחן הקודם פותח את ההיקף שלו (?scope=past). SCOPE מוגדר בהמשך, ולכן נשמר כאן רק השם. */
+var requestedScope=null;
+try{requestedScope=new URLSearchParams(window.location.search).get("scope");}catch(e){}
 var quiz=[],idx=0,score=0,answered=false,wrong=[],ansMap=[],timer=null,timeLeft=0;
 /* בסימולציה "כמו במבחן": skipMap מסמן את השאלות שנמחקו, ו־realRun אומר שהסבב הנוכחי במבנה הזה. */
 var skipMap=[],realRun=false;
@@ -830,6 +833,7 @@ var SCOPE={
   drop:{name:"ירד מהמבחן", hint:"נושאים שהמרצה הורידה מהמבחן: המודל של רדין (שיעור 15.9.2026, דקה 22), ונתיב המטרה, המשאבים הקוגניטיביים ומודל קבלת ההחלטות הנורמטיבי (שיעור החזרה 6.10.2026, דקה 71). השאלות נשארו כאן למי שרוצה, ואינן נכללות בשאר ההיקפים ובסימולציה כמו במבחן",
         f:function(q){return !!q.d;}}
 };
+if(requestedScope&&SCOPE[requestedScope])sel.src=requestedScope;
 function srcOK(q){ return SCOPE[sel.src] ? SCOPE[sel.src].f(q) : q.s===sel.src; }
 function modeOK(q){return sel.mode!=="exam" || !q.practiceOnly;}
 function filterBank(){return BANK.filter(function(x){return sel.topics.indexOf(x.t)>=0 && srcOK(x) && modeOK(x);});}

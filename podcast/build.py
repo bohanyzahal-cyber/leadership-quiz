@@ -215,6 +215,9 @@ def write_index(episodes):
         topics = ep.get("quiz_topics", [ep["quiz_topic"]])
         quiz_links = "".join('<a href="../index.html?topic=' + esc(quote(topic))
                              + '">תרגול: ' + esc(topic) + '</a>' for topic in topics)
+        if ep.get("quiz_scope"):
+            quiz_links = ('<a href="../index.html?scope=' + esc(quote(ep["quiz_scope"]))
+                          + '">תרגול: ' + esc(ep["quiz_topic"]) + '</a>')
         guide_links = "".join('<a href="../חומר-פתוח.html#page-' + str(page)
                               + '">חוברת: ' + esc(label) + '</a>'
                               for page, label in ep.get("guide_pages", [[3, "אדיג׳ס והנורמות"]]))
