@@ -194,15 +194,18 @@ header .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;}
 /*__BANK__*/
 (function(){
 "use strict";
-var LET=["א","ב","ג","ד"];
+var LET=["א","ב","ג","ד","ה"];
 var SRC_META={
   "חומרי הקורס":{bg:"var(--clsBg)",fg:"var(--clsTx)",full:"חומרי קורס 111762"},
   "תרגול חדש":{bg:"var(--warnBg)",fg:"var(--warnTx)",full:"תרגול נוסף לפי חומרי הקורס"},
-  "מבחן הכיתה המקבילה":{bg:"var(--xBg)",fg:"var(--xTx)",full:"שאלת מבחן · הכיתה המקבילה"}
+  "מבחן הכיתה המקבילה":{bg:"var(--xBg)",fg:"var(--xTx)",full:"שאלת מבחן · הכיתה המקבילה"},
+  "מבחן קודם":{bg:"var(--xBg)",fg:"var(--xTx)",full:"שאלה ממבחן קודם"}
 };
 /* שאלות מבחן: קוויז החזרה ושאלות המבחן של הכיתה המקבילה אצל אותה מרצה. הן מסומנות x:1.
    שאלה שמקורה רק שם מקבלת את המקור XSRC; שאלה שיש לה גם מקור בחומר שלנו נשארת "חומרי הקורס". */
 var XSRC="מבחן הכיתה המקבילה";
+/* מבחן קודם בקורס, 46 שאלות מצילומים שהמשתמש העביר ב־1.11.2026. בהן יכולות להיות 5 תשובות. */
+var PSRC="מבחן קודם";
 var app=document.getElementById("app");
 var TOPICS=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.t]){s[b.t]=1;TOPICS.push(b.t);}}); })();
 var SOURCES=[]; (function(){var s={};BANK.forEach(function(b){if(!s[b.s]){s[b.s]=1;SOURCES.push(b.s);}}); })();
@@ -231,6 +234,8 @@ var SCOPE={
         f:function(q){return !q.d;}},
   xam:{name:"שאלות מבחן", hint:"שאלות מקוויז החזרה ומהמבחן של הכיתה המקבילה, אצל אותה מרצה. הן אינן חומר של הכיתה שלנו וחלקן אינן מופיעות במצגות שלנו; הן כאן כי ייתכן שיחזרו במבחן",
         f:function(q){return !!q.x&&!q.d;}},
+  past:{name:"מבחן קודם", hint:"46 השאלות של מבחן קודם בקורס, לפי צילומים של טופס הבחינה. התשובות לפי הסימונים בצילום; בשאלות שלא סומנו, המפתח לפי חומר הקורס וההסבר אומר זאת. בשאלות 16, 44 ו־46 המפתח אינו ודאי",
+        f:function(q){return q.s===PSRC&&!q.d;}},
   core:{name:"תרגול חדש", hint:"ניקוד שאלונים, טקטיקות השפעה, צוותים, מקרי הקורס ומבחני האישיות שנוספו בעדכון",
         f:function(q){return q.s==="תרגול חדש"&&!q.d;}},
   /* d — נושא שהמרצה הורידה מהמבחן. השאלות נשארות במאגר, אבל רק בהיקף הזה. */
@@ -244,8 +249,8 @@ function countScope(k){return BANK.filter(function(x){return SCOPE[k].f(x) && mo
 
 /* אחרי הגדרת SCOPE — הכותרת מונה את שאלות ההיקף, לא את כל המאגר. */
 document.getElementById("sub").textContent =
-  BANK.filter(function(x){return x.s!==XSRC&&!x.d;}).length+" שאלות מחומר הכיתה שלנו · מסלול של "+countScope("xam")+
-  " שאלות מבחן מהכיתה המקבילה · חוברת של 10 עמודים להדפסה על 5 דפים דו־צדדיים.";
+  BANK.filter(function(x){return x.s!==XSRC&&x.s!==PSRC&&!x.d;}).length+" שאלות מחומר הכיתה שלנו · מסלול של "+countScope("xam")+
+  " שאלות מבחן מהכיתה המקבילה · "+countScope("past")+" שאלות ממבחן קודם · חוברת של 10 עמודים להדפסה על 5 דפים דו־צדדיים.";
 /* מערבב את סדר התשובות בכל שאלה, כדי שהתשובה הנכונה לא תהיה תמיד באותו מקום */
 /* בשאלות המבחן יש לעיתים 2–3 תשובות, שתי תשובות שסומנו כנכונות, או תשובה כמו
    "כל ההיגדים נכונים". תשובה כזו נשארת אחרונה, והשאר מתערבבות. */
@@ -338,7 +343,7 @@ function setup(){
   /* היקף לימוד */
   var row0=E("div",{"class":"toolbar"});
   row0.appendChild(E("span",{"class":"lbl"},"היקף:"));
-  ["exam","xam","core","drop"].forEach(function(k){
+  ["exam","xam","past","core","drop"].forEach(function(k){
     var b=E("button",{"class":"chip"+(sel.src===k?" active":"")},
       SCOPE[k].name+" <small>"+countScope(k)+"</small>");
     b.onclick=function(){sel.src=k;setup();};
@@ -568,7 +573,7 @@ document.addEventListener("keydown",function(ev){
   var bs=app.querySelectorAll(".nav .btn");
   if(ev.key==="ArrowLeft"&&bs[1]&&!bs[1].disabled){ev.preventDefault();bs[1].click();}
   else if(ev.key==="ArrowRight"&&bs[0]&&!bs[0].disabled){ev.preventDefault();bs[0].click();}
-  else if(/^[1-4]$/.test(ev.key)){
+  else if(/^[1-5]$/.test(ev.key)){
     var o=app.querySelectorAll(".opt")[+ev.key-1];
     if(o&&o.className.indexOf("locked")<0){ev.preventDefault();o.click();}
   }

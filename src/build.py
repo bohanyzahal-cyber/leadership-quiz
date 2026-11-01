@@ -119,18 +119,20 @@ const POS=/כל התשובות נכונות|כל ההיגדים נכונים|כ�
 /* שאלות המבחן של הכיתה המקבילה נשמרות בנוסח המקורי: מותרות בהן 2–4 אפשרויות,
    שתי תשובות נכונות ותשובה כמו "כל ההיגדים נכונים" (האפליקציה משאירה אותה אחרונה). */
 const XSRC='מבחן הכיתה המקבילה';
+/* שאלות המבחן הקודם (צילומים, 1.11.2026) נשמרות בנוסח קרוב למקור, ובשתיים מהן 5 תשובות. */
+const PSRC='מבחן קודם';
 const err=[], seen={};
 BANK.forEach((q,i)=>{
   const at=`#${i} ${(q.q||'').slice(0,40)}`;
-  const X=q.s===XSRC, n=Array.isArray(q.o)?q.o.length:0;
+  const X=q.s===XSRC, P=q.s===PSRC, n=Array.isArray(q.o)?q.o.length:0;
   const cs=Array.isArray(q.c)?q.c:[q.c];
   if(!q.t||!q.s||!q.q||!q.e)             err.push(at+' — שדה חסר');
   if(X && !q.x)                           err.push(at+' — שאלת מבחן בלי הסימון x');
-  if(X ? (n<2||n>4) : n!==4)              err.push(at+' — מספר אפשרויות שגוי');
+  if(X ? (n<2||n>4) : P ? (n<4||n>5) : n!==4)              err.push(at+' — מספר אפשרויות שגוי');
   else if(new Set(q.o).size!==n)          err.push(at+' — אפשרות כפולה');
   if(!cs.length||cs.some(c=>typeof c!=='number'||c<0||c>=n)||(!X&&Array.isArray(q.c)))
                                           err.push(at+' — c מחוץ לתחום');
-  if(!X && (q.o||[]).some(o=>POS.test(o))) err.push(at+' — מסיח תלוי-מיקום');
+  if(!X && !P && (q.o||[]).some(o=>POS.test(o))) err.push(at+' — מסיח תלוי-מיקום');
   /* כפילות ניסוח: נוצרת כשמאריכים מסיח בטקסט שכבר מופיע בסופו. */
   (q.o||[]).forEach((o)=>{
     const w=String(o).split(/\s+/);
@@ -196,7 +198,7 @@ except Exception as e:
 CHECK = r"""
 const fs=require('fs');
 eval(fs.readFileSync(process.argv[2],'utf8'));
-const OWN=BANK.filter(q=>q.s!=='מבחן הכיתה המקבילה');
+const OWN=BANK.filter(q=>q.s!=='מבחן הכיתה המקבילה'&&q.s!=='מבחן קודם');
 const n=OWN.length, rank=[0,0,0,0];
 let long=0, short=0, outlierHit=0;
 const outliers=[];
