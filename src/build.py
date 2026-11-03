@@ -39,6 +39,8 @@ def for_course_folder(page):
     לחוברת יש שם אחר. בלי ההחלפה הזו הקישור אליה שבור."""
     return (page.replace('href="חומר-פתוח.html"',
                          'href="חומר פתוח - מנהיגות בניהול.html"')
+                .replace('href="exam-guide.html"',
+                         'href="leadership-quiz/exam-guide.html"')
                 .replace('href="podcast/index.html"',
                          'href="leadership-quiz/podcast/index.html"'))
 
