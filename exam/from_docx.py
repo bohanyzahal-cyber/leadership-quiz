@@ -19,6 +19,7 @@ import base64, hashlib
 import docx
 from docx.table import Table
 from docx.text.paragraph import Paragraph
+from docx.oxml.ns import qn
 from PIL import Image
 
 BLIP = '{http://schemas.openxmlformats.org/drawingml/2006/main}blip'
@@ -198,6 +199,7 @@ IMG_AS_TABLE = {
 
 doc = docx.Document(SRC)
 secs, cur, blocks, items = [], None, None, None
+gloss = None
 used_sections = set()
 
 def flush_items():
@@ -228,8 +230,19 @@ for ch in doc.element.body.iterchildren():
         continue
     if tag != 'p': continue
     p = Paragraph(ch, doc)
+    # מילון המונחים באנגלית (5.11.2026) כתוב בוורד בסגנון של המפתח. אחרי הכותרת שלו
+    # הוא נאסף לטבלה: מונח באנגלית, עברית, עמוד.
+    if p.style.name == 'ExamNavIndex' and gloss is not None:
+        rs = [''.join(t.text or '' for t in r.iter(qn('w:t'))) for r in ch.iterchildren(qn('w:r'))]
+        num = ''.join(t.text or '' for t in ch.iter(qn('w:t')) if t.getparent().getparent().tag != ch.tag)
+        clean = lambda x: re.sub(r'[‎‏]', '', x).strip()
+        if len(rs) >= 2: gloss.append([clean(rs[0]), clean(rs[1]), clean(num)])
+        continue
     if p.style.name.startswith('ExamNav'):
         continue
+    if gloss:
+        flush_items(); blocks.append(("tbl", (["מונח באנגלית", "בעברית", "עמוד"], gloss)))
+    gloss = None
 
     # תמונות: דיאגרמות וצילומי טבלאות מהמצגות. הן יושבות בתוך פסקה,
     # ולעיתים בפסקה שכל תוכנה הוא התמונה — ולכן נבדקות לפני בדיקת הטקסט.
@@ -306,7 +319,9 @@ for ch in doc.element.body.iterchildren():
         # ומודגשים הפכו לכותרות (57 במקום 10).
         if sz == 10.5 or (sz is None and len(plain) < 46
                           and not plain.endswith('.') and not txt.startswith('**')):
-            flush_items(); blocks.append(("h2", balance(txt))); continue
+            flush_items(); blocks.append(("h2", balance(txt)))
+            if plain.startswith('מונחים באנגלית'): gloss = []
+            continue
         # פסקת המשך — נשמרת כטקסט חופשי
         flush_items(); blocks.append(("p", balance(txt)))
 
