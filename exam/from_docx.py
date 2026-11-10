@@ -78,9 +78,14 @@ def rich(par):
             out.append("\n")
         t = r.text
         if not t: continue
-        if r.bold and t.strip():
+        # הדגשה צהובה בוורד (10.11.2026): תשובות מסומנות. באתר הן __...__, כלומר <em> צהוב.
+        hl = r._r.rPr is not None and r._r.rPr.find(qn('w:highlight')) is not None
+        if (r.bold or hl) and t.strip():
             lead = len(t) - len(t.lstrip()); trail = len(t) - len(t.rstrip())
-            out.append(t[:lead] + "**" + t.strip() + "**" + (t[len(t)-trail:] if trail else ""))
+            core = t.strip()
+            if hl: core = "__" + core + "__"
+            if r.bold: core = "**" + core + "**"
+            out.append(t[:lead] + core + (t[len(t)-trail:] if trail else ""))
         else:
             out.append(t)
     s = "".join(out)
@@ -88,6 +93,8 @@ def rich(par):
     # את הרווח שבין שתי ריצות מודגשות — מכאן "מחקריהאות'ורן" ו"וגישת?ת.".
     s = re.sub(r'\*\*(\s+)\*\*', r'\1', s)     # "**  **"  ->  "  "
     s = re.sub(r'\*\*\*\*', '', s)             # רק ריצות צמודות ממש
+    s = re.sub(r'__(\s*)__', r'\1', s)         # הדגשות צמודות מתאחדות
+    s = re.sub(r'__(\*\*)__', r'\1', s)
     s = re.sub(r'[\t ]{2,}', ' ', s)           # טאבים ששימשו ליישור בוורד
     return s.strip()
 

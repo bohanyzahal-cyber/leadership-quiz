@@ -116,13 +116,16 @@ td.k{font-weight:700;color:#0b4f9e;font-feature-settings:"tnum"}
 
 /* ---------- הדפסה ---------- */
 @page{size:A4;margin:0}
+/* 10.11.2026: בלי זה הדפדפן משמיט בהדפסה את צבעי הרקע (כותרות, לשוניות,
+   הדגשות), וכל דף יוצא אפור. חברים מהכיתה ביקשו להדפיס כמו שזה באתר. */
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media print{
   html{background:#fff}
   .pg{margin:0;box-shadow:none;break-after:page;page-break-after:always}
   .pg:last-child{break-after:auto;page-break-after:auto}
   .pg.over{outline:none}
   .pg.over::after{display:none}
-  .noprint{display:none}
+  .noprint{display:none!important}  /* !important: הכלל הרגיל של .noprint בא אחרי הבלוק הזה וגבר עליו */
 }
 .noprint{position:fixed;top:8px;left:8px;z-index:99;background:#12161c;color:#fff;
   border-radius:6px;padding:7px 11px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.4);
@@ -134,7 +137,7 @@ td.k{font-weight:700;color:#0b4f9e;font-feature-settings:"tnum"}
 </style>
 </head>
 <body>
-<div class="noprint"><span id="stat">בונה…</span><button onclick="print()">הדפסה</button><a href="חומר פתוח - מנהיגות בניהול.pdf" download>PDF להדפסה</a><a href="חומר פתוח - מנהיגות בניהול.docx" download>Word לעריכה</a><a id="back" href="index.html">לתרגול ←</a></div>
+<div class="noprint"><span id="stat">בונה…</span><button onclick="print()">הדפסה</button><a href="חומר פתוח - מנהיגות בניהול - צבעוני.pdf" download>PDF צבעוני כמו כאן</a><a href="חומר פתוח - מנהיגות בניהול.pdf" download>PDF בעיצוב Word</a><a href="חומר פתוח - מנהיגות בניהול.docx" download>Word לעריכה</a><a id="back" href="index.html">לתרגול ←</a></div>
 <div id="out"></div>
 
 <script>
